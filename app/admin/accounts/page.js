@@ -1,0 +1,92 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import useMe from "@/hooks/useMe";
+import Modal from "@/components/Modal";
+import { api, Pager, Toast } from "@/components/CrudPage";
+import { money, incomeCats, expenseCats, methodLabel } from "@/lib/school";
+import { todayDhaka } from "@/lib/dates";
+
+const first = () => todayDhaka().slice(0, 8) + "01";
+export default function Accounts() {
+  const me = useMe();
+  const [range, setRange] = useState({ from: first(), to: todayDhaka() });
+  const [type, setType] = useState(""); const [account, setAccount] = useState(""); const [q, setQ] = useState(""); const [dq, setDq] = useState("");
+  const [sum, setSum] = useState(null); const [led, setLed] = useState({ items: [], total: 0, pages: 1, totals: { income: 0, expense: 0 } }); const [page, setPage] = useState(1);
+  const [err, setErr] = useState(""); const [toast, setToast] = useState(""); const [modal, setModal] = useState(false); const [form, setForm] = useState({}); const [mErr, setMErr] = useState(""); const [busy, setBusy] = useState(false);
+  const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
+
+  useEffect(() => { const t = setTimeout(() => { setDq(q); setPage(1); }, 350); return () => clearTimeout(t); }, [q]);
+  useEffect(() => setPage(1), [range, type, account]);
+  const load = useCallback(async () => {
+    setErr("");
+    const qs = `from=${range.from}&to=${range.to}`;
+    const [s, l] = await Promise.all([api("GET", `/api/accounts/summary?${qs}`), api("GET", `/api/ledger?${qs}&page=${page}&limit=20&q=${encodeURIComponent(dq)}${type ? "&type=" + type : ""}${account ? "&account=" + account : ""}`)]);
+    if (s.ok) setSum(s.d); else setErr(s.d.error || "লোড করা যায়নি");
+    if (l.ok) setLed(l.d);
+  }, [range, page, dq, type, account]);
+  useEffect(() => { load(); }, [load]);
+
+  if (!me) return <p>লোড হচ্ছে...</p>;
+  const canW = me.perms.includes("accounts.write");
+  const cats = form.type === "income" ? Object.entries(incomeCats).filter(([k]) => k !== "fee") : Object.entries(expenseCats).filter(([k]) => k !== "refund");
+  async function save(e) {
+    e.preventDefault(); setBusy(true); setMErr("");
+    const r = await api("POST", "/api/ledger", form); setBusy(false);
+    if (!r.ok) return setMErr(r.d.error || "সমস্যা হয়েছে");
+    setModal(false); flash("✅ এন্ট্রি যোগ হয়েছে"); load();
+  }
+  async function voidE(e) {
+    const reason = prompt("বাতিলের কারণ:"); if (!reason) return;
+    const r = await api("DELETE", `/api/ledger/${e._id}`, { reason }); if (!r.ok) return flash(r.d.error || "সমস্যা হয়েছে"); flash("✅ বাতিল হয়েছে"); load();
+  }
+  const label = (e) => (e.type === "income" ? incomeCats[e.category] : expenseCats[e.category]) || e.category;
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <h1 className="mr-auto text-2xl font-bold">হিসাব নিকাশ</h1>
+        <input type="date" className="input !w-auto" value={range.from} max={range.to} onChange={(e) => setRange({ ...range, from: e.target.value })} aria-label="শুরু" />
+        <input type="date" className="input !w-auto" value={range.to} min={range.from} max={todayDhaka()} onChange={(e) => setRange({ ...range, to: e.target.value })} aria-label="শেষ" />
+        <button className="btn-ghost" onClick={() => window.print()}>🖨 প্রিন্ট</button>
+        {canW && <button className="btn-primary" onClick={() => { setMErr(""); setForm({ type: "expense", date: todayDhaka(), account: "cash" }); setModal(true); }}>+ আয়/ব্যয় এন্ট্রি</button>}
+      </div>
+      <div className="hidden print:block"><h1 className="text-xl font-bold">আয়-ব্যয় বিবরণী: {range.from} থেকে {range.to}</h1></div>
+      {err && <p className="rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
+      {sum && <>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[["প্রারম্ভিক জের", sum.openingTotal], ["মোট আয়", sum.income, "text-brand"], ["মোট ব্যয়", sum.expense, "text-red-600"], ["সমাপনী জের", sum.closingTotal]].map(([l, v, c]) => <div key={l} className="card"><p className="text-sm text-slate-600">{l}</p><p className={`text-xl font-bold ${c || "text-ink"}`}>{money(v)}</p></div>)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="card"><h2 className="mb-2 font-bold">অ্যাকাউন্ট অনুযায়ী সমাপনী জের</h2>{Object.entries(sum.closing).map(([k, v]) => <div key={k} className="flex justify-between border-b border-slate-100 py-1.5 last:border-0"><span>{methodLabel[k]}</span><b>{money(v)}</b></div>)}
+            <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-900">মোট বকেয়া ফি (দায়): <b>{money(sum.outstanding.total)}</b> ({sum.outstanding.invoices} টি ইনভয়েস)</p></div>
+          <div className="card"><h2 className="mb-2 font-bold">খাত অনুযায়ী</h2>{sum.byCategory.length === 0 ? <p className="text-slate-500">এই সময়ে কোনো লেনদেন নেই</p> : sum.byCategory.map((c) => <div key={c.type + c.category} className="flex justify-between border-b border-slate-100 py-1.5 last:border-0"><span>{c.type === "income" ? "আয়" : "ব্যয়"} · {(c.type === "income" ? incomeCats : expenseCats)[c.category] || c.category}</span><b className={c.type === "income" ? "text-brand" : "text-red-600"}>{money(c.total)}</b></div>)}</div>
+        </div>
+      </>}
+      <div>
+        <div className="mb-3 flex flex-wrap gap-2 print:hidden">
+          <select className="input !w-auto" value={type} onChange={(e) => setType(e.target.value)}><option value="">আয়+ব্যয়</option><option value="income">শুধু আয়</option><option value="expense">শুধু ব্যয়</option></select>
+          <select className="input !w-auto" value={account} onChange={(e) => setAccount(e.target.value)}><option value="">সব অ্যাকাউন্ট</option>{Object.entries(methodLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+          <input className="input !w-48" placeholder="বিবরণ/রেফারেন্স" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[700px]"><thead><tr>{["তারিখ", "বিবরণ", "খাত", "অ্যাকাউন্ট", "আয়", "ব্যয়", ""].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+          <tbody>{led.items.map((e) => <tr key={e._id}><td className="td whitespace-nowrap">{e.date}</td><td className="td">{e.title}{e.source !== "manual" && <span className="ml-1 rounded bg-brand-light px-1.5 text-xs text-brand">স্বয়ংক্রিয়</span>}</td><td className="td">{label(e)}</td><td className="td">{methodLabel[e.account]}</td>
+            <td className="td font-semibold text-brand">{e.type === "income" ? money(e.amount) : ""}</td><td className="td font-semibold text-red-600">{e.type === "expense" ? money(e.amount) : ""}</td>
+            <td className="td text-right print:hidden">{canW && e.source === "manual" && <button className="font-semibold text-red-600" onClick={() => voidE(e)}>বাতিল</button>}</td></tr>)}
+            {led.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={7}>কোনো লেনদেন নেই</td></tr>}
+            <tr className="bg-slate-50 font-bold"><td className="td" colSpan={4}>মোট (ফিল্টার অনুযায়ী)</td><td className="td text-brand">{money(led.totals.income)}</td><td className="td text-red-600">{money(led.totals.expense)}</td><td className="td" /></tr></tbody></table></div>
+        <div className="print:hidden"><Pager page={page} pages={led.pages} total={led.total} setPage={setPage} /></div>
+        <p className="mt-2 text-xs text-slate-500 print:hidden">বেতন আদায় ও রিফান্ড "বেতন ও ফি" পেজ থেকে নিজে থেকে এখানে আসে — হাতে তুলতে হয় না।</p>
+      </div>
+      {modal && <Modal title="আয়/ব্যয় এন্ট্রি" onClose={() => setModal(false)}><form className="space-y-3" onSubmit={save}>
+        <div><label className="label">ধরন</label><select className="input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, category: "" })}><option value="expense">ব্যয়</option><option value="income">আয়</option></select></div>
+        <div><label className="label">খাত</label><select required className="input" value={form.category || ""} onChange={(e) => setForm({ ...form, category: e.target.value })}><option value="">— বাছাই করুন —</option>{cats.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+        <div><label className="label">বিবরণ</label><input required minLength={2} className="input" onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+        <div><label className="label">টাকা</label><input type="number" required min="0.01" step="0.01" className="input" onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
+        <div><label className="label">তারিখ</label><input type="date" required max={todayDhaka()} className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+        <div><label className="label">অ্যাকাউন্ট</label><select className="input" value={form.account} onChange={(e) => setForm({ ...form, account: e.target.value })}>{Object.entries(methodLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+        <div><label className="label">ভাউচার/রেফারেন্স নং (ঐচ্ছিক)</label><input className="input" onChange={(e) => setForm({ ...form, reference: e.target.value })} /></div>
+        {mErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mErr}</p>}<button className="btn-primary w-full" disabled={busy}>সংরক্ষণ</button></form></Modal>}
+      <Toast msg={toast} />
+    </div>
+  );
+}
