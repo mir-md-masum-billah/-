@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Hind_Siliguri, Tiro_Bangla } from "next/font/google";
+import { createHash } from "node:crypto";
 import { school } from "@/lib/school";
 import { getSite } from "@/lib/site";
 import { getLang } from "@/lib/lang";
@@ -14,7 +15,10 @@ const display = Tiro_Bangla({ subsets: ["bengali", "latin"], weight: "400", vari
 export async function generateMetadata() {
   const lang = await getLang();
   const s = await getSite(lang);
-  return { title: { default: s.name, template: `%s · ${s.name}` }, description: s.tagline };
+  // লোগো বদলালে ?v= বদলে যায়, তাই ব্রাউজারের পুরোনো ফেভিকন আটকে থাকে না
+  const v = s.logo ? createHash("md5").update(s.logo).digest("hex").slice(0, 8) : "0";
+  const icon = `/favicon?v=${v}`;
+  return { title: { default: s.name, template: `%s · ${s.name}` }, description: s.tagline, icons: { icon, shortcut: icon, apple: icon } };
 }
 export const viewport = { width: "device-width", initialScale: 1, themeColor: "#04261E" };
 
