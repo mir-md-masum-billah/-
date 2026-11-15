@@ -2,22 +2,33 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
-import { school, months, money, bn, methodLabel } from "@/lib/school";
+import Crest from "@/components/Crest";
+import Icon from "@/components/Icon";
+import Loader from "@/components/Loader";
+import LanguageSwitch from "@/components/LanguageSwitch";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useLang } from "@/components/LangProvider";
+import { school } from "@/lib/school";
+import { schoolEn, num, moneyL, dateL, monthName } from "@/lib/translations";
 
-const label = { present: "উপস্থিত", absent: "অনুপস্থিত", late: "দেরি", leave: "ছুটি", holiday: "হলিডে" };
-const tabs = [["home", "প্রোফাইল"], ["att", "হাজিরা"], ["fee", "বেতন"], ["res", "ফলাফল"], ["lv", "ছুটি"], ["not", "নোটিশ"]];
+const Title = ({ children }) => <h2 className="border-b border-gold/40 px-4 pb-2 pt-4 font-display text-xl text-brand-dark">{children}</h2>;
 
 export default function StudentPortal() {
+  const { lang, t: all } = useLang(); const t = all.student;
+  const bn = (n) => num(n, lang), money = (n) => moneyL(n, lang), bnDate = (s) => dateL(s, lang), mo = (i) => monthName(i, lang);
+  const label = t.status, methodLabel = t.methods;
+  const tabs = Object.entries(t.tabs);
+  const schoolName = lang === "en" ? schoolEn.name : school.name;
   const [leaves, setLeaves] = useState(null); const [lf, setLf] = useState({}); const [lErr, setLErr] = useState(""); const [lBusy, setLBusy] = useState(false); const [d, setD] = useState(null); const [err, setErr] = useState(""); const [tab, setTab] = useState("home");
-  const load = () => { setErr(""); fetch("/api/student/me").then(async (r) => { if (r.status === 401) { location.href = "/login"; return; } const j = await r.json(); r.ok ? setD(j) : setErr(j.error || "তথ্য আনা যায়নি"); }).catch(() => setErr("নেটওয়ার্ক সমস্যা — ইন্টারনেট যাচাই করুন")); };
+  const load = () => { setErr(""); fetch("/api/student/me").then(async (r) => { if (r.status === 401) { location.href = "/login"; return; } const j = await r.json(); r.ok ? setD(j) : setErr(j.error || t.errLoad); }).catch(() => setErr(t.errNet)); };
   useEffect(load, []);
   const loadLeaves = () => fetch("/api/leaves?limit=50").then((r) => r.json()).then((j) => setLeaves(j.items || [])).catch(() => setLeaves([]));
   useEffect(() => { if (tab === "lv") loadLeaves(); }, [tab]);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
-  async function applyLeave(e) { e.preventDefault(); setLBusy(true); setLErr(""); const r = await fetch("/api/leaves", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: lf.from || today, to: lf.to || lf.from || today, reason: lf.reason }) }); const j = await r.json(); setLBusy(false); if (!r.ok) return setLErr(j.error || "সমস্যা হয়েছে"); setLf({}); e.target.reset(); loadLeaves(); }
-  async function cancelLeave(id) { if (!confirm("আবেদন বাতিল করবেন?")) return; const r = await fetch("/api/leaves/" + id, { method: "DELETE" }); if (r.ok) loadLeaves(); }
-  if (err) return <div className="p-6"><p role="alert" className="mb-3 rounded-lg bg-red-50 p-4 text-red-700">{err}</p><button className="btn-primary" onClick={load}>আবার চেষ্টা করুন</button></div>;
-  if (!d) return <p className="p-6">লোড হচ্ছে...</p>;
+  async function applyLeave(e) { e.preventDefault(); setLBusy(true); setLErr(""); const r = await fetch("/api/leaves", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: lf.from || today, to: lf.to || lf.from || today, reason: lf.reason }) }); const j = await r.json(); setLBusy(false); if (!r.ok) return setLErr(j.error || t.errGeneric); setLf({}); e.target.reset(); loadLeaves(); }
+  async function cancelLeave(id) { if (!confirm(t.confirmCancel)) return; const r = await fetch("/api/leaves/" + id, { method: "DELETE" }); if (r.ok) loadLeaves(); }
+  if (err) return <div className="p-6"><p role="alert" className="mb-3 rounded-lg bg-red-50 p-4 text-red-700">{err}</p><button className="btn-primary" onClick={load}>{t.retry}</button></div>;
+  if (!d) return <div className="grid min-h-screen place-items-center bg-pearl"><Loader label={t.loading} /></div>;
   const { student: s, attendance: att, invoices, payments, results, notices } = d;
 
   // হারে ছুটি ও হলিডে ধরা হয় না; অচিহ্নিত দিনের রেকর্ডই নেই
@@ -30,55 +41,69 @@ export default function StudentPortal() {
   const groups = {}; results.forEach((r) => { (groups[`${r.exam} — ${r.year}`] ||= []).push(r); });
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-brand text-white"><div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3"><Link href="/" className="font-bold">{school.name}</Link><LogoutButton className="btn bg-white/15 !py-1.5 text-white hover:bg-white/25" /></div></header>
-      <nav className="sticky top-0 z-10 border-b bg-white" aria-label="পোর্টাল মেনু"><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`whitespace-nowrap px-4 py-3 font-semibold ${tab === k ? "border-b-4 border-gold text-brand" : "text-slate-600"}`}>{l}</button>)}</div></nav>
-      <main className="mx-auto max-w-4xl space-y-4 p-4">
+    <div className="min-h-screen bg-pearl">
+      <header className="lattice hero-glow text-white">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2.5 font-display text-lg"><Crest className="h-8 w-auto text-gold-soft" />{schoolName}</Link>
+          <span className="flex items-center gap-2"><LanguageSwitch /><ThemeToggle /><LogoutButton className="btn border border-white/25 !px-3 !py-1.5 text-sm text-white hover:border-gold-soft hover:bg-white/10" /></span>
+        </div>
+      </header>
+      <nav className="sticky top-0 z-10 border-b border-gold/30 bg-white/95 backdrop-blur" aria-label={t.portalMenu}><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`whitespace-nowrap border-b-[3px] px-4 py-3.5 font-semibold transition ${tab === k ? "border-gold text-brand-dark" : "border-transparent text-slate-500 hover:text-brand"}`}>{l}</button>)}</div></nav>
+      <main className="mx-auto max-w-4xl space-y-5 p-4 sm:py-8">
         {tab === "home" && <>
-          <div className="card flex items-center gap-4">{s.photo ? <img src={s.photo} alt="" className="h-20 w-20 rounded-full object-cover" /> : <div className="grid h-20 w-20 place-items-center rounded-full bg-brand-light text-3xl font-bold text-brand">{s.name[0]}</div>}
-            <div><h1 className="text-2xl font-bold">{s.name}</h1><p className="text-slate-600">শ্রেণি: {s.class}{s.section ? ` (${s.section})` : ""} · রোল: {bn(s.roll)} · আইডি: {s.studentId}</p></div></div>
+          <div className="lattice flex items-center gap-5 overflow-hidden rounded-2xl bg-night p-5 text-white shadow-gilt sm:gap-7 sm:p-7">
+            <div className="shrink-0 rounded-t-full border border-gold-soft/70 p-1">
+              {s.photo ? <img src={s.photo} alt="" className="h-28 w-24 rounded-t-full object-cover sm:h-32 sm:w-28" /> : <div className="grid h-28 w-24 place-items-center rounded-t-full bg-brand font-display text-4xl text-gold-soft sm:h-32 sm:w-28">{s.name[0]}</div>}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-3xl leading-snug text-white sm:text-4xl">{s.name}</h1>
+              <span className="gold-rule mt-3" />
+              <p className="mt-3 text-white/80">{t.cls}: {s.class}{s.section ? ` (${s.section})` : ""} · {t.roll}: {bn(s.roll)}</p>
+              <p className="text-sm text-gold-soft">{t.id}: {s.studentId}</p>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="card text-center"><p className="text-sm text-slate-600">হাজিরা</p><p className="text-2xl font-bold text-brand">{pct === null ? "—" : bn(pct) + "%"}</p></div>
-            <div className="card text-center"><p className="text-sm text-slate-600">মোট জমা</p><p className="text-lg font-bold text-brand sm:text-xl">{money(totalPaid)}</p></div>
-            <div className="card text-center"><p className="text-sm text-slate-600">বকেয়া</p><p className={`text-lg font-bold sm:text-xl ${totalDue > 0 ? "text-red-600" : "text-brand"}`}>{money(totalDue)}</p></div></div>
-          <div className="card grid gap-2 text-sm sm:grid-cols-2">{[["পিতার নাম", s.fatherName], ["মাতার নাম", s.motherName], ["অভিভাবকের মোবাইল", s.guardianPhone || s.phone], ["জন্ম তারিখ", s.dob], ["ঠিকানা", s.address], ["মাসিক বেতন", money(s.monthlyFee)]].map(([k, v]) => <p key={k}><span className="text-slate-500">{k}: </span>{v || "—"}</p>)}</div>
+            <div className="card text-center"><p className="text-sm text-slate-600">{t.attendance}</p><p className="font-display text-2xl text-brand-dark sm:text-3xl">{pct === null ? "—" : bn(pct) + "%"}</p></div>
+            <div className="card text-center"><p className="text-sm text-slate-600">{t.paid}</p><p className="font-display text-xl text-brand-dark sm:text-2xl">{money(totalPaid)}</p></div>
+            <div className="card text-center"><p className="text-sm text-slate-600">{t.due}</p><p className={`font-display text-xl sm:text-2xl ${totalDue > 0 ? "text-red-600" : "text-brand-dark"}`}>{money(totalDue)}</p></div></div>
+          <div className="card grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">{[[t.father, s.fatherName], [t.mother, s.motherName], [t.guardianPhone, s.guardianPhone || s.phone], [t.dob, s.dob ? bnDate(s.dob) : s.dob], [t.address, s.address], [t.monthlyFee, money(s.monthlyFee)]].map(([k, v]) => <p key={k} className="border-b border-slate-100 pb-2"><span className="block text-xs text-slate-500">{k}</span>{v || "—"}</p>)}</div>
         </>}
 
         {tab === "att" && <>
-          <div className="card"><p className="text-slate-600">মোট উপস্থিতির হার (ছুটি/হলিডে বাদে)</p><p className="text-4xl font-bold text-brand">{pct === null ? "এখনো হাজিরা নেই" : bn(pct) + "%"}</p>{pct !== null && <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full bg-brand" style={{ width: pct + "%" }} /></div>}</div>
-          <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{["মাস", "উপস্থিত", "অনুপস্থিত", "দেরি", "ছুটি", "হার"].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-            <tbody>{Object.entries(byMonth).sort().reverse().map(([k, m]) => { const tot = m.present + m.late + m.absent; return <tr key={k}><td className="td">{months[Number(k.slice(5)) - 1]} {bn(k.slice(0, 4)).replace(/,/g, "")}</td><td className="td">{bn(m.present)}</td><td className="td">{bn(m.absent)}</td><td className="td">{bn(m.late)}</td><td className="td">{bn(m.leave)}</td><td className="td font-bold">{tot ? bn(Math.round(((m.present + m.late) / tot) * 100)) + "%" : "—"}</td></tr>; })}
-              {att.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={6}>কোনো হাজিরা নেই</td></tr>}</tbody></table></div>
-          <div className="card"><h2 className="mb-2 font-bold">সাম্প্রতিক হাজিরা</h2><div className="flex flex-wrap gap-2">{att.slice(0, 30).map((a) => <span key={a.date} className={`rounded-lg px-2.5 py-1 text-xs ${a.status === "absent" ? "bg-red-100 text-red-700" : a.status === "present" ? "bg-brand-light text-brand" : "bg-gold-light text-ink"}`}>{a.date.slice(5)} · {label[a.status]}</span>)}</div></div>
+          <div className="card"><p className="text-slate-600">{t.rate}</p><p className="font-display text-5xl text-brand-dark">{pct === null ? <span className="text-2xl text-slate-500">{t.noAtt}</span> : bn(pct) + "%"}</p>{pct !== null && <div className="mt-3 h-2 overflow-hidden rounded-full bg-brand-light"><div className="h-full rounded-full bg-gradient-to-r from-brand to-gold" style={{ width: pct + "%" }} /></div>}</div>
+          <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{t.cols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <tbody>{Object.entries(byMonth).sort().reverse().map(([k, m]) => { const tot = m.present + m.late + m.absent; return <tr key={k}><td className="td">{mo(Number(k.slice(5)) - 1)} {bn(k.slice(0, 4)).replace(/,/g, "")}</td><td className="td">{bn(m.present)}</td><td className="td">{bn(m.absent)}</td><td className="td">{bn(m.late)}</td><td className="td">{bn(m.leave)}</td><td className="td font-bold">{tot ? bn(Math.round(((m.present + m.late) / tot) * 100)) + "%" : "—"}</td></tr>; })}
+              {att.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={6}>{t.noAttRows}</td></tr>}</tbody></table></div>
+          <div className="card"><h2 className="mb-3 font-display text-xl text-brand-dark">{t.recent}</h2><div className="flex flex-wrap gap-2">{att.slice(0, 30).map((a) => <span key={a.date} className={`rounded-md px-2.5 py-1 text-xs ${a.status === "absent" ? "bg-red-100 text-red-700" : a.status === "present" ? "bg-brand-light text-brand" : "bg-gold-light text-ink"}`}>{a.date.slice(5)} · {label[a.status]}</span>)}</div></div>
         </>}
 
         {tab === "fee" && <>
-          <div className="grid grid-cols-2 gap-3"><div className="card"><p className="text-sm text-slate-600">মোট জমা</p><p className="text-2xl font-bold text-brand">{money(totalPaid)}</p></div><div className="card"><p className="text-sm text-slate-600">মোট বকেয়া</p><p className={`text-2xl font-bold ${totalDue > 0 ? "text-red-600" : "text-brand"}`}>{money(totalDue)}</p></div></div>
-          <div className="card overflow-x-auto !p-0"><h2 className="px-4 pt-3 font-bold">ফি ও বকেয়া</h2><table className="w-full min-w-[480px]"><thead><tr>{["বিবরণ", "ধার্য", "জমা", "বকেয়া"].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-            <tbody>{invoices.map((i) => <tr key={i._id}><td className="td">{i.title}{i.period && ` — ${months[i.month - 1]} ${i.year}`}</td><td className="td">{money(i.obligation)}</td><td className="td">{money(i.paid)}</td><td className={`td font-bold ${i.due > 0 ? "text-red-600" : "text-brand"}`}>{i.due > 0 ? money(i.due) : "পরিশোধিত"}</td></tr>)}
-              {invoices.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>কোনো ফি নেই</td></tr>}</tbody></table></div>
-          <div className="card overflow-x-auto !p-0"><h2 className="px-4 pt-3 font-bold">পেমেন্টের ইতিহাস ও রসিদ</h2><table className="w-full min-w-[480px]"><thead><tr>{["তারিখ", "রসিদ", "বিবরণ", "পদ্ধতি", "টাকা"].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-            <tbody>{payments.map((p) => <tr key={p._id}><td className="td">{p.date}</td><td className="td"><a className="text-brand underline" href={`/student/receipt/${p._id}`} target="_blank">{p.receiptNo}</a></td><td className="td">{p.invoice?.title}{p.type === "refund" && " (ফেরত)"}</td><td className="td">{methodLabel[p.method]}</td><td className="td font-semibold">{p.type === "refund" ? "−" : ""}{money(p.amount)}</td></tr>)}
-              {payments.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={5}>কোনো পেমেন্ট নেই</td></tr>}</tbody></table></div>
+          <div className="grid grid-cols-2 gap-3"><div className="card"><p className="text-sm text-slate-600">{t.paid}</p><p className="font-display text-3xl text-brand-dark">{money(totalPaid)}</p></div><div className="card"><p className="text-sm text-slate-600">{t.totalDue}</p><p className={`font-display text-3xl ${totalDue > 0 ? "text-red-600" : "text-brand-dark"}`}>{money(totalDue)}</p></div></div>
+          <div className="card overflow-x-auto !p-0"><Title>{t.feeTitle}</Title><table className="w-full min-w-[480px]"><thead><tr>{t.feeCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <tbody>{invoices.map((i) => <tr key={i._id}><td className="td">{i.title}{i.period && ` — ${mo(i.month - 1)} ${i.year}`}</td><td className="td">{money(i.obligation)}</td><td className="td">{money(i.paid)}</td><td className={`td font-bold ${i.due > 0 ? "text-red-600" : "text-brand"}`}>{i.due > 0 ? money(i.due) : t.settled}</td></tr>)}
+              {invoices.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noFees}</td></tr>}</tbody></table></div>
+          <div className="card overflow-x-auto !p-0"><Title>{t.payTitle}</Title><table className="w-full min-w-[480px]"><thead><tr>{t.payCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <tbody>{payments.map((p) => <tr key={p._id}><td className="td">{p.date}</td><td className="td"><a className="font-semibold text-brand underline decoration-gold underline-offset-4" href={`/student/receipt/${p._id}`} target="_blank">{p.receiptNo}</a></td><td className="td">{p.invoice?.title}{p.type === "refund" && ` (${t.refund})`}</td><td className="td">{methodLabel[p.method]}</td><td className="td font-semibold">{p.type === "refund" ? "−" : ""}{money(p.amount)}</td></tr>)}
+              {payments.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={5}>{t.noPay}</td></tr>}</tbody></table></div>
         </>}
 
-        {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">কোনো ফলাফল নেই।</p>}
+        {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">{t.noResults}</p>}
           {Object.entries(groups).map(([name, rows]) => { const got = rows.reduce((t, r) => t + r.marks, 0), full = rows.reduce((t, r) => t + r.full, 0); return (
-            <div key={name} className="card overflow-x-auto !p-0"><h2 className="px-4 pt-3 font-bold">{name}</h2><table className="w-full"><thead><tr><th className="th">বিষয়</th><th className="th">প্রাপ্ত</th><th className="th">পূর্ণমান</th></tr></thead>
-              <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td></tr>)}<tr className="bg-brand-light font-bold"><td className="td">মোট</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td></tr></tbody></table></div>); })}</>}
+            <div key={name} className="card overflow-x-auto !p-0"><Title>{name}</Title><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+              <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td></tr>)}<tr className="bg-gold-light/60 font-bold"><td className="td">{t.total}</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td></tr></tbody></table></div>); })}</>}
 
         {tab === "lv" && <>
-          <form onSubmit={applyLeave} className="card grid gap-3 sm:grid-cols-2"><h2 className="font-bold sm:col-span-2">নতুন ছুটির আবেদন</h2>
-            <div><label className="label">শুরু</label><input type="date" required min={today} defaultValue={today} className="input" onChange={(e) => setLf({ ...lf, from: e.target.value })} /></div>
-            <div><label className="label">শেষ</label><input type="date" required min={lf.from || today} defaultValue={today} className="input" onChange={(e) => setLf({ ...lf, to: e.target.value })} /></div>
-            <div className="sm:col-span-2"><label className="label">কারণ</label><textarea required minLength={3} rows={2} className="input" onChange={(e) => setLf({ ...lf, reason: e.target.value })} /></div>
-            {lErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 sm:col-span-2">{lErr}</p>}<button className="btn-primary sm:col-span-2" disabled={lBusy}>{lBusy ? "অপেক্ষা করুন..." : "আবেদন করুন"}</button></form>
-          <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{["তারিখ", "কারণ", "অবস্থা", ""].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-            <tbody>{(leaves || []).map((l) => <tr key={l._id}><td className="td whitespace-nowrap">{l.from}{l.to !== l.from && ` → ${l.to}`}</td><td className="td">{l.reason}</td><td className="td">{{ pending: "অপেক্ষমাণ", approved: "অনুমোদিত", rejected: "প্রত্যাখ্যাত", cancelled: "বাতিল" }[l.status]}{l.decisionNote && <span className="block text-xs text-slate-500">{l.decisionNote}</span>}</td><td className="td text-right">{l.status === "pending" && <button className="text-red-600" onClick={() => cancelLeave(l._id)}>বাতিল</button>}</td></tr>)}
-              {leaves && leaves.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>কোনো আবেদন নেই</td></tr>}{!leaves && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>লোড হচ্ছে...</td></tr>}</tbody></table></div>
+          <form onSubmit={applyLeave} className="card grid gap-4 sm:grid-cols-2"><h2 className="font-display text-xl text-brand-dark sm:col-span-2">{t.newLeave}</h2>
+            <div><label className="label">{t.from}</label><input type="date" required min={today} defaultValue={today} className="input" onChange={(e) => setLf({ ...lf, from: e.target.value })} /></div>
+            <div><label className="label">{t.to}</label><input type="date" required min={lf.from || today} defaultValue={today} className="input" onChange={(e) => setLf({ ...lf, to: e.target.value })} /></div>
+            <div className="sm:col-span-2"><label className="label">{t.reason}</label><textarea required minLength={3} rows={2} className="input" onChange={(e) => setLf({ ...lf, reason: e.target.value })} /></div>
+            {lErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 sm:col-span-2">{lErr}</p>}<button className="btn-primary sm:col-span-2" disabled={lBusy}>{lBusy ? t.wait : t.apply}</button></form>
+          <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{t.leaveCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <tbody>{(leaves || []).map((l) => <tr key={l._id}><td className="td whitespace-nowrap">{l.from}{l.to !== l.from && ` → ${l.to}`}</td><td className="td">{l.reason}</td><td className="td">{t.leaveStatus[l.status]}{l.decisionNote && <span className="block text-xs text-slate-500">{l.decisionNote}</span>}</td><td className="td text-right">{l.status === "pending" && <button className="text-red-600 hover:underline" onClick={() => cancelLeave(l._id)}>{t.cancel}</button>}</td></tr>)}
+              {leaves && leaves.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noLeaves}</td></tr>}{!leaves && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.loading}</td></tr>}</tbody></table></div>
         </>}
 
-        {tab === "not" && <>{notices.length === 0 && <p className="card text-slate-500">কোনো নোটিশ নেই।</p>}{notices.map((n) => <article key={n._id} className="card"><p className="text-xs text-slate-500">{n.date}</p><h2 className="font-bold">{n.title}</h2>{n.body && <p className="mt-1 whitespace-pre-line text-slate-700">{n.body}</p>}{n.fileUrl && <a href={n.fileUrl} target="_blank" className="mt-2 inline-block text-brand">সংযুক্ত ফাইল দেখুন</a>}</article>)}</>}
+        {tab === "not" && <>{notices.length === 0 && <p className="card text-slate-500">{t.noNotices}</p>}{notices.map((n) => <article key={n._id} className="card"><p className="text-xs text-slate-500">{bnDate(n.date)}</p><h2 className="text-lg font-bold text-brand-dark">{n.title}</h2>{n.body && <p className="mt-1 whitespace-pre-line text-slate-700">{n.body}</p>}{n.fileUrl && <a href={n.fileUrl} target="_blank" className="btn-ghost mt-3 !py-1.5 text-sm"><Icon name="file" className="h-4 w-4" /> {t.file}</a>}</article>)}</>}
       </main>
     </div>
   );

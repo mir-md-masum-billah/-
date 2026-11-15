@@ -1,17 +1,18 @@
 "use client";
 import CrudPage from "@/components/CrudPage";
 import useMe from "@/hooks/useMe";
+import { useLang } from "@/components/LangProvider";
 import { roleLabel, STAFF_ROLES, canAssignRole } from "@/lib/rbac";
 
 export default function Page() {
-  const me = useMe();
-  if (!me) return <p>লোড হচ্ছে...</p>;
+  const me = useMe(); const { x } = useLang();
+  if (!me) return <p>{x("লোড হচ্ছে...")}</p>;
   return (
     <CrudPage
       resource="staff" title="শিক্ষক ও স্টাফ" addLabel="নতুন স্টাফ" canWrite={me.perms.includes("staff.write")}
       deleteLabel="নিষ্ক্রিয়" deleteConfirm="নিষ্ক্রিয় করলে লগইন বন্ধ হবে (ডেটা থাকবে)। নিশ্চিত?"
       defaults={{ role: "teacher", active: "true" }}
-      columns={[{ key: "userId", label: "আইডি" }, { key: "name", label: "নাম" }, { label: "পদ", render: (r) => roleLabel[r.role] }, { key: "designation", label: "পদবি" }, { key: "subject", label: "বিষয়" }, { key: "phone", label: "মোবাইল" }, { label: "অবস্থা", render: (r) => (r.active ? "সক্রিয়" : "নিষ্ক্রিয়") }]}
+      columns={[{ key: "userId", label: "আইডি" }, { key: "name", label: "নাম" }, { label: "পদ", render: (r) => x(roleLabel[r.role]) }, { key: "designation", label: "পদবি" }, { key: "subject", label: "বিষয়" }, { key: "phone", label: "মোবাইল" }, { label: "অবস্থা", render: (r) => (r.active ? x("সক্রিয়") : x("নিষ্ক্রিয়")) }]}
       fields={[
         { key: "userId", label: "লগইন আইডি", required: true },
         { key: "password", label: "পাসওয়ার্ড (কমপক্ষে ৬)", type: "password", required: true },

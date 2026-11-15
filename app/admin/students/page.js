@@ -3,25 +3,25 @@ import CrudPage from "@/components/CrudPage";
 import useSettings from "@/hooks/useSettings";
 import useMe from "@/hooks/useMe";
 import Link from "next/link";
-import { money } from "@/lib/school";
+import { useLang } from "@/components/LangProvider";
 
 export default function Page() {
-  const st = useSettings(); const me = useMe();
-  if (!st || !me) return <p>লোড হচ্ছে...</p>;
+  const st = useSettings(); const me = useMe(); const { x, money } = useLang();
+  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
   const classOpts = st.classes.map((c) => c.name);
   return (
     <CrudPage
       resource="students" title="শিক্ষার্থী" addLabel="নতুন ভর্তি" canWrite={me.perms.includes("students.write")}
-      toolbar={<>{me.perms.includes("students.promote") && <Link href="/admin/promotion" className="btn-ghost !py-2">প্রমোশন</Link>}{me.perms.includes("students.write") && <Link href="/admin/students/import" className="btn-ghost !py-2">আমদানি</Link>}<a href="/api/students/export" className="btn-ghost !py-2">এক্সপোর্ট CSV</a></>}
-      rowActions={(r) => <Link href={`/admin/students/${r._id}`} className="mr-3 font-semibold text-slate-700">প্রোফাইল</Link>}
+      toolbar={<>{me.perms.includes("students.promote") && <Link href="/admin/promotion" className="btn-ghost !py-2">{x("প্রমোশন")}</Link>}{me.perms.includes("students.write") && <Link href="/admin/students/import" className="btn-ghost !py-2">{x("আমদানি")}</Link>}<a href="/api/students/export" className="btn-ghost !py-2">{x("এক্সপোর্ট CSV")}</a></>}
+      rowActions={(r) => <Link href={`/admin/students/${r._id}`} className="mr-3 font-semibold text-slate-700">{x("প্রোফাইল")}</Link>}
       deleteLabel="আর্কাইভ" deleteConfirm="শিক্ষার্থীকে আর্কাইভ করবেন? লগইন বন্ধ হবে, কিন্তু হাজিরা-ফি-ফলাফলের ইতিহাস থাকবে।"
       defaults={{ active: "true", session: st.currentSession || "" }}
       columns={[
         { label: "ছবি", render: (r) => (r.photo ? <img src={r.photo} alt="" className="h-9 w-9 rounded-full object-cover" /> : "—") },
         { key: "studentId", label: "আইডি" }, { key: "name", label: "নাম" },
-        { label: "শ্রেণি", render: (r) => `${r.class}${r.section ? " (" + r.section + ")" : ""}` }, { key: "roll", label: "রোল" },
+        { label: "শ্রেণি", render: (r) => `${x(r.class)}${r.section ? " (" + r.section + ")" : ""}` }, { key: "roll", label: "রোল" },
         { key: "phone", label: "মোবাইল" }, { label: "মাসিক বেতন", render: (r) => money(r.monthlyFee) },
-        { label: "অবস্থা", render: (r) => (r.active ? "সক্রিয়" : "নিষ্ক্রিয়") },
+        { label: "অবস্থা", render: (r) => (r.active ? x("সক্রিয়") : x("নিষ্ক্রিয়")) },
       ]}
       fields={[
         { key: "studentId", label: "শিক্ষার্থী আইডি (ফাঁকা = স্বয়ংক্রিয়)" },

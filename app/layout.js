@@ -1,16 +1,38 @@
 import "./globals.css";
-import { Hind_Siliguri } from "next/font/google";
+import { Hind_Siliguri, Tiro_Bangla } from "next/font/google";
 import { school } from "@/lib/school";
+import { getSite } from "@/lib/site";
+import { getLang } from "@/lib/lang";
+import { LangProvider } from "@/components/LangProvider";
+import Splash from "@/components/Splash";
 
-const font = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn", display: "swap" });
+const body = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn", display: "swap" });
+// শিরোনামের জন্য ক্লাসিক বাংলা সেরিফ — একটাই ওজন, তাই ফন্ট ফাইল হালকা
+const display = Tiro_Bangla({ subsets: ["bengali", "latin"], weight: "400", variable: "--font-display", display: "swap" });
 
-export const metadata = { title: `${school.name}`, description: school.tagline };
-export const viewport = { width: "device-width", initialScale: 1 };
+export async function generateMetadata() {
+  const lang = await getLang();
+  const s = await getSite(lang);
+  return { title: { default: s.name, template: `%s · ${s.name}` }, description: s.tagline };
+}
+export const viewport = { width: "device-width", initialScale: 1, themeColor: "#04261E" };
 
-export default function RootLayout({ children }) {
+// লোডিং স্ক্রিন একই সেশনে দ্বিতীয়বার দেখাতে না চাইলে এই স্ক্রিপ্ট থাকবে; প্রতিবার দেখাতে চাইলে স্ক্রিপ্টটি মুছে দিন
+// একই স্ক্রিপ্টে সংরক্ষিত থিম (লাইট/ডার্ক) পেইন্টের আগেই বসে, তাই ঝিলিক দেয় না; সংরক্ষিত না থাকলে ডিভাইসের সেটিং অনুসরণ করে
+const skipSplash = `try{var d=document.documentElement,t=localStorage.getItem("theme");if(t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches)d.classList.add("dark");if(sessionStorage.getItem("splash"))d.classList.add("no-splash")}catch(e){}`;
+
+export default async function RootLayout({ children }) {
+  const lang = await getLang();
+  const site = await getSite(lang);
   return (
-    <html lang="bn" className={font.variable}>
-      <body className="font-sans">{children}</body>
+    <html lang={lang === "en" ? "en" : "bn"} className={`${body.variable} ${display.variable}`} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: skipSplash }} /></head>
+      <body className="font-sans">
+        <LangProvider lang={lang}>
+          <Splash name={site.name || school.name} tagline={site.tagline} logo={site.logo} />
+          {children}
+        </LangProvider>
+      </body>
     </html>
   );
 }

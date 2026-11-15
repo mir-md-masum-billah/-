@@ -34,4 +34,3 @@ Environment Variables এ `.env.example` এর সব মান দিন। �
 ## টেস্ট
 খালি ডেটাবেজে (`npm run migrate` তারপর `ADMIN_ID=superadmin1 ADMIN_PASSWORD=SuperPass123 npm run seed`), সার্ভার চালু রেখে (`R2_PUBLIC_URL=https://pub-test.r2.dev` সহ):
 `BASE=http://localhost:3000 npm run test:integration` (ফেজ ১–২) · প্রতিটির আগে ডেটাবেজ খালি করে `npm run test:phase3` (ফেজ ৩) · `npm run test:smoke` (পেজ)।
-# -
