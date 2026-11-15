@@ -2,6 +2,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Icon from "./Icon";
 import { useLang } from "./LangProvider";
+import Loader from "@/components/Loader";
+import { confirmBox } from "@/components/Dialog";
 
 export async function api(method, url, body) {
   try {
@@ -69,7 +71,7 @@ export default function CrudPage({ resource, title, columns, fields, defaults = 
     if (r.d.generatedPassword) { setCreds({ id: r.d.studentId, pw: r.d.generatedPassword }); } else flash("✅ " + x("সংরক্ষিত হয়েছে"));
   }
   async function remove(row) {
-    if (!confirm(x(deleteConfirm))) return;
+    if (!(await confirmBox(x(deleteConfirm), { danger: true }))) return;
     const r = await api("DELETE", `/api/${resource}/${row._id}`);
     if (!r.ok) return flash(r.d.error || x("সমস্যা হয়েছে"));
     flash("✅ " + x("সম্পন্ন")); load();
@@ -106,7 +108,7 @@ export default function CrudPage({ resource, title, columns, fields, defaults = 
               </tr>
             ))}
             {!loading && data.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={columns.length + 1}>{dq ? x("খুঁজে পাওয়া যায়নি") : x("এখনো কোনো তথ্য নেই — উপরের বাটনে চাপ দিয়ে যোগ করুন")}</td></tr>}
-            {loading && data.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={columns.length + 1}>{x("লোড হচ্ছে...")}</td></tr>}
+            {loading && data.items.length === 0 && <tr><td className="td" colSpan={columns.length + 1}><Loader compact label={x("লোড হচ্ছে...")} /></td></tr>}
           </tbody>
         </table>
       </div>

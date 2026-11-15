@@ -5,6 +5,7 @@ import { getSite } from "@/lib/site";
 import { getLang } from "@/lib/lang";
 import { LangProvider } from "@/components/LangProvider";
 import Splash from "@/components/Splash";
+import DialogHost from "@/components/Dialog";
 
 const body = Hind_Siliguri({ subsets: ["bengali", "latin"], weight: ["400", "500", "600", "700"], variable: "--font-bn", display: "swap" });
 // শিরোনামের জন্য ক্লাসিক বাংলা সেরিফ — একটাই ওজন, তাই ফন্ট ফাইল হালকা
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }) {
         <LangProvider lang={lang}>
           <Splash name={site.name || school.name} tagline={site.tagline} logo={site.logo} />
           {children}
+          <DialogHost />
         </LangProvider>
       </body>
     </html>

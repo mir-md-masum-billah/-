@@ -10,6 +10,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useLang } from "@/components/LangProvider";
 import { school } from "@/lib/school";
 import { schoolEn, num, moneyL, dateL, monthName } from "@/lib/translations";
+import { confirmBox } from "@/components/Dialog";
 
 const Title = ({ children }) => <h2 className="border-b border-gold/40 px-4 pb-2 pt-4 font-display text-xl text-brand-dark">{children}</h2>;
 
@@ -26,9 +27,9 @@ export default function StudentPortal() {
   useEffect(() => { if (tab === "lv") loadLeaves(); }, [tab]);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
   async function applyLeave(e) { e.preventDefault(); setLBusy(true); setLErr(""); const r = await fetch("/api/leaves", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: lf.from || today, to: lf.to || lf.from || today, reason: lf.reason }) }); const j = await r.json(); setLBusy(false); if (!r.ok) return setLErr(j.error || t.errGeneric); setLf({}); e.target.reset(); loadLeaves(); }
-  async function cancelLeave(id) { if (!confirm(t.confirmCancel)) return; const r = await fetch("/api/leaves/" + id, { method: "DELETE" }); if (r.ok) loadLeaves(); }
+  async function cancelLeave(id) { if (!(await confirmBox(t.confirmCancel, { danger: true }))) return; const r = await fetch("/api/leaves/" + id, { method: "DELETE" }); if (r.ok) loadLeaves(); }
   if (err) return <div className="p-6"><p role="alert" className="mb-3 rounded-lg bg-red-50 p-4 text-red-700">{err}</p><button className="btn-primary" onClick={load}>{t.retry}</button></div>;
-  if (!d) return <div className="grid min-h-screen place-items-center bg-pearl"><Loader label={t.loading} /></div>;
+  if (!d) return <Loader full name={schoolName} label={t.loading} />;
   const { student: s, attendance: att, invoices, payments, results, notices } = d;
 
   // হারে ছুটি ও হলিডে ধরা হয় না; অচিহ্নিত দিনের রেকর্ডই নেই
@@ -100,7 +101,7 @@ export default function StudentPortal() {
             {lErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 sm:col-span-2">{lErr}</p>}<button className="btn-primary sm:col-span-2" disabled={lBusy}>{lBusy ? t.wait : t.apply}</button></form>
           <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{t.leaveCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
             <tbody>{(leaves || []).map((l) => <tr key={l._id}><td className="td whitespace-nowrap">{l.from}{l.to !== l.from && ` → ${l.to}`}</td><td className="td">{l.reason}</td><td className="td">{t.leaveStatus[l.status]}{l.decisionNote && <span className="block text-xs text-slate-500">{l.decisionNote}</span>}</td><td className="td text-right">{l.status === "pending" && <button className="text-red-600 hover:underline" onClick={() => cancelLeave(l._id)}>{t.cancel}</button>}</td></tr>)}
-              {leaves && leaves.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noLeaves}</td></tr>}{!leaves && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.loading}</td></tr>}</tbody></table></div>
+              {leaves && leaves.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noLeaves}</td></tr>}{!leaves && <tr><td className="td" colSpan={4}><Loader compact label={t.loading} /></td></tr>}</tbody></table></div>
         </>}
 
         {tab === "not" && <>{notices.length === 0 && <p className="card text-slate-500">{t.noNotices}</p>}{notices.map((n) => <article key={n._id} className="card"><p className="text-xs text-slate-500">{bnDate(n.date)}</p><h2 className="text-lg font-bold text-brand-dark">{n.title}</h2>{n.body && <p className="mt-1 whitespace-pre-line text-slate-700">{n.body}</p>}{n.fileUrl && <a href={n.fileUrl} target="_blank" className="btn-ghost mt-3 !py-1.5 text-sm"><Icon name="file" className="h-4 w-4" /> {t.file}</a>}</article>)}</>}

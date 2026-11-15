@@ -4,10 +4,11 @@ import useSettings from "@/hooks/useSettings";
 import useMe from "@/hooks/useMe";
 import Link from "next/link";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
 
 export default function Page() {
   const st = useSettings(); const me = useMe(); const { x, money } = useLang();
-  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const classOpts = st.classes.map((c) => c.name);
   return (
     <CrudPage

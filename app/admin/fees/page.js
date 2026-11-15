@@ -7,6 +7,8 @@ import { api, Pager, Toast } from "@/components/CrudPage";
 import { months, feeCats, methodLabel } from "@/lib/school";
 import { useLang } from "@/components/LangProvider";
 import { todayDhaka, yearDhaka, monthDhaka } from "@/lib/dates";
+import Loader from "@/components/Loader";
+import { promptBox } from "@/components/Dialog";
 
 const F = ({ l, children }) => <div><label className="label">{l}</label>{children}</div>;
 
@@ -35,7 +37,7 @@ export default function Fees() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api("GET", "/api/students?limit=1000&active=true").then((r) => r.ok && setStudents(r.d.items)); }, []);
 
-  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const can = (p) => me.perms.includes(p);
   const open = (type, init = {}) => { setMErr(""); setForm(init); setModal(type); };
   async function submit(e, method, url, body, okMsg, after) {
@@ -44,12 +46,12 @@ export default function Fees() {
     if (!r.ok) return setMErr(r.d.error || x("সমস্যা হয়েছে"));
     setModal(null); flash(okMsg(r.d)); after?.(r.d); load();
   }
-  const ask = async (msg, method, url, ok) => { const reason = prompt(msg); if (!reason) return; const r = await api(method, url, { reason }); if (!r.ok) return flash(r.d.error || x("সমস্যা হয়েছে")); flash(ok); load(); };
+  const ask = async (msg, method, url, ok) => { const reason = await promptBox(msg, { danger: true }); if (!reason) return; const r = await api(method, url, { reason }); if (!r.ok) return flash(r.d.error || x("সমস্যা হয়েছে")); flash(ok); load(); };
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-2xl font-bold">{x("বেতন ও ফি")}</h1>
+        <h1 className="mr-auto text-3xl text-brand-dark">{x("বেতন ও ফি")}</h1>
         {can("fees.manage") && <><button className="btn-ghost" onClick={() => open("gen", { month: monthDhaka(), year: yearDhaka(), class: "" })}>{x("মাসিক ফি তৈরি")}</button><button className="btn-primary" onClick={() => open("new", { category: "tuition", period: todayDhaka().slice(0, 7) })}>{x("+ ইনভয়েস")}</button></>}
       </div>
       <div className="mb-4 flex gap-2 border-b">{[["inv", x("ইনভয়েস ও বকেয়া")], ["pay", x("পেমেন্ট ইতিহাস")]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`px-4 py-2 font-semibold ${tab === k ? "border-b-4 border-gold text-brand" : "text-slate-600"}`}>{l}</button>)}</div>

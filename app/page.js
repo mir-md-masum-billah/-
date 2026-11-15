@@ -4,6 +4,7 @@ import { Notice, Student, User } from "@/lib/models";
 import { getSite } from "@/lib/site";
 import { getLang } from "@/lib/lang";
 import { tr, dateParts, num, digits } from "@/lib/translations";
+import { getDashboardHref } from "@/lib/session";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import Icon from "@/components/Icon";
@@ -30,7 +31,7 @@ const isFresh = (d) => { const t = Date.parse(d); return !Number.isNaN(t) && Dat
 export default async function Home() {
   const lang = await getLang();
   const t = tr(lang);
-  const { notices, students, teachers, school } = await getData(lang);
+  const [{ notices, students, teachers, school }, dash] = await Promise.all([getData(lang), getDashboardHref()]);
   // প্রতিষ্ঠার সাল এখনো না বসানো থাকলে ("…লিখুন") নকশায় দেখানো হয় না
   const showEst = school.established && !String(school.established).includes("লিখুন");
   const stats = [
@@ -51,7 +52,7 @@ export default async function Home() {
             <span className="gold-rule mt-6" />
             <p className="mt-6 max-w-lg font-display text-xl leading-relaxed text-gold-soft sm:text-2xl">{school.tagline}</p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/login" className="btn-gold !px-7 !py-3 text-base">{t.hero.login}</Link>
+              <Link href={dash || "/login"} className="btn-gold !px-7 !py-3 text-base">{dash ? t.nav.dashboard : t.hero.login}</Link>
               <Link href="/admission" className="btn-light !px-7 !py-3 text-base">{t.hero.apply}</Link>
             </div>
             <dl className="mt-12 flex flex-wrap gap-y-5 border-t border-white/15 pt-6">
@@ -148,7 +149,7 @@ export default async function Home() {
                 </li>
               ))}
             </ol>
-            <Link href="/login" className="btn-gold mt-9 !px-7 !py-3 text-base">{t.digital.cta}</Link>
+            <Link href={dash || "/login"} className="btn-gold mt-9 !px-7 !py-3 text-base">{dash ? t.nav.dashboard : t.digital.cta}</Link>
           </div>
 
           <ul className="grid content-start gap-x-10 sm:grid-cols-2">

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import useSettings from "@/hooks/useSettings";
 import { api, Toast } from "@/components/CrudPage";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
+import { confirmBox } from "@/components/Dialog";
 
 export default function Promotion() {
   const st = useSettings(); const { x, n } = useLang();
@@ -13,12 +15,12 @@ export default function Promotion() {
     if (!f.fromClass) return;
     api("GET", `/api/students?class=${encodeURIComponent(f.fromClass)}${f.fromSection ? "&section=" + encodeURIComponent(f.fromSection) : ""}&active=true&limit=500`).then((r) => { if (r.ok) { setList(r.d.items); setSel(Object.fromEntries(r.d.items.map((s) => [s._id, true]))); } });
   }, [f.fromClass, f.fromSection, msg]);
-  if (!st) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const chosen = list.filter((s) => sel[s._id]); const secs = (n) => st.classes.find((c) => c.name === n)?.sections || [];
   async function run() {
     setErr(""); setMsg("");
     if (!chosen.length) return setErr(x("কমপক্ষে একজন বাছাই করুন"));
-    if (!confirm(f.graduate ? x("{0} জনকে \"পাস করে বের\" করবেন? লগইন বন্ধ হবে।", chosen.length) : x("{0} জনকে {1} থেকে {2} এ প্রমোশন দেবেন?", chosen.length, x(f.fromClass), x(f.toClass)))) return;
+    if (!(await confirmBox(f.graduate ? x("{0} জনকে \"পাস করে বের\" করবেন? লগইন বন্ধ হবে।", chosen.length) : x("{0} জনকে {1} থেকে {2} এ প্রমোশন দেবেন?", chosen.length, x(f.fromClass), x(f.toClass))))) return;
     setBusy(true); const r = await api("POST", "/api/students/promote", { ...f, studentIds: chosen.map((s) => s._id) }); setBusy(false);
     if (!r.ok) return setErr(r.d.error || x("সমস্যা হয়েছে")); setMsg(f.graduate ? x("✅ {0} জনের পাস সম্পন্ন", r.d.moved) : x("✅ {0} জনের প্রমোশন সম্পন্ন", r.d.moved));
   }
@@ -29,7 +31,7 @@ export default function Promotion() {
   const sel1 = (k, opts, ph) => <select className="input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value, ...(k === "fromClass" ? { fromSection: "" } : {}), ...(k === "toClass" ? { toSection: "" } : {}) })}><option value="">{x(ph)}</option>{opts.map((o) => <option key={o} value={o}>{x(o)}</option>)}</select>;
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{x("প্রমোশন ও রোল")}</h1>
+      <h1 className="text-3xl text-brand-dark">{x("প্রমোশন ও রোল")}</h1>
       {err && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <div className="card space-y-4"><h2 className="font-bold">{x("শ্রেণি প্রমোশন")}</h2>
         <div className="grid gap-3 sm:grid-cols-4"><div><label className="label">{x("বর্তমান শ্রেণি")}</label>{sel1("fromClass", st.classes.map((c) => c.name), "—")}</div><div><label className="label">{x("শাখা")}</label>{sel1("fromSection", secs(f.fromClass), "সব")}</div>
@@ -40,7 +42,7 @@ export default function Promotion() {
         <p className="text-sm text-slate-600">{x("টিক ওঠা {0} জন যাবে। যাদের টিক সরাবেন (অকৃতকার্য) তারা বর্তমান শ্রেণিতেই থাকবে। রোল নতুন শ্রেণির শেষ রোলের পর থেকে ক্রমানুসারে বসবে।", chosen.length)}</p>
         <button className="btn-primary" disabled={busy || (!f.graduate && !f.toClass)} onClick={run}>{busy ? x("অপেক্ষা করুন...") : f.graduate ? x("পাস সম্পন্ন করুন") : x("প্রমোশন দিন")}</button></div>
       <div className="card space-y-3"><h2 className="font-bold">{x("রোল পুনর্বিন্যাস")} ({x(f.fromClass)}{f.fromSection && ` — ${f.fromSection}`})</h2>
-        <div className="flex flex-wrap items-center gap-3"><select className="input !w-auto" value={order} onChange={(e) => setOrder(e.target.value)}><option value="name">{x("নামের বর্ণানুক্রমে")}</option><option value="roll">{x("বর্তমান রোলের ক্রমে (ফাঁক ভরাট)")}</option></select><button className="btn-ghost" onClick={() => confirm(x("রোল বদলে যাবে। নিশ্চিত?")) && renumber()}>{x("১ থেকে নতুন রোল দিন")}</button></div></div>
+        <div className="flex flex-wrap items-center gap-3"><select className="input !w-auto" value={order} onChange={(e) => setOrder(e.target.value)}><option value="name">{x("নামের বর্ণানুক্রমে")}</option><option value="roll">{x("বর্তমান রোলের ক্রমে (ফাঁক ভরাট)")}</option></select><button className="btn-ghost" onClick={() => confirmBox(x("রোল বদলে যাবে। নিশ্চিত?")).then((ok) => ok && renumber())}>{x("১ থেকে নতুন রোল দিন")}</button></div></div>
       <Toast msg={msg} />
     </div>
   );

@@ -4,6 +4,7 @@ import useSettings from "@/hooks/useSettings";
 import Modal from "@/components/Modal";
 import { api, Pager, Toast } from "@/components/CrudPage";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
 
 const SL = { pending: ["অপেক্ষমাণ", "bg-amber-100 text-amber-800"], approved: ["অনুমোদিত", "bg-brand-light text-brand"], rejected: ["প্রত্যাখ্যাত", "bg-red-100 text-red-700"] };
 export default function Applications() {
@@ -19,10 +20,10 @@ export default function Applications() {
     if (!r.ok) return setMErr(r.d.error || x("সমস্যা হয়েছে"));
     setM(null); load(); if (m.approve) setCreds(r.d); else { setToast(x("✅ প্রত্যাখ্যান করা হয়েছে")); setTimeout(() => setToast(""), 2500); }
   }
-  if (!st) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st) return <Loader compact label={x("লোড হচ্ছে...")} />;
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-2xl font-bold">{x("ভর্তির আবেদন")}</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-3xl text-brand-dark">{x("ভর্তির আবেদন")}</h1>
         <select className="input !w-auto" value={status} onChange={(e) => setStatus(e.target.value)}><option value="pending">{x("অপেক্ষমাণ")}</option><option value="approved">{x("অনুমোদিত")}</option><option value="rejected">{x("প্রত্যাখ্যাত")}</option><option value="">{x("সব")}</option></select></div>
       <p className="mb-3 text-sm text-slate-600">{x("আবেদন লিংক:")} <b>/admission</b> {x("(হোমপেজে \"ভর্তির আবেদন\" বাটন আছে)")}</p>
       {err && <p className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}

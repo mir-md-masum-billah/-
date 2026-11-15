@@ -7,6 +7,7 @@ import { todayDhaka } from "@/lib/dates";
 import { months } from "@/lib/school";
 import { toCSV, download } from "@/lib/csv";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
 
 export default function Report() {
   const st = useSettings(); const me = useMe(); const { x, n, date: fmtDate } = useLang();
@@ -25,15 +26,15 @@ export default function Report() {
       setLoading(false);
     })();
   }, [st, me, type, cls, section, mode, month, year, date]);
-  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const tabs = [["student", x("শিক্ষার্থী")], ...(me.perms.includes("staffattendance.read") ? [["staff", x("স্টাফ")]] : []), ["absent", x("অনুপস্থিতের তালিকা")]];
-  const period = mode === "year" ? x("{0} সাল", fmtYear(year)) : `${x(months[Number(month.slice(5)) - 1])} ${fmtYear(month.slice(0, 4))}`;
   const fmtYear = (y) => (/^\d+$/.test(String(y)) ? n(Number(y)).replace(/[,،]/g, "") : y);
+  const period = mode === "year" ? x("{0} সাল", fmtYear(year)) : `${x(months[Number(month.slice(5)) - 1])} ${fmtYear(month.slice(0, 4))}`;
   const rows = d?.rows || [];
   const exportCsv = () => download(`attendance-${type}-${mode === "year" ? year : month}.csv`, toCSV(rows.map((r) => ({ name: r.student?.name || r.person?.name, roll: r.student?.roll ?? "", present: r.present, absent: r.absent, late: r.late, leave: r.leave, holiday: r.holiday, unmarked: r.unmarked, percent: r.pct ?? "" })), ["name", "roll", "present", "absent", "late", "leave", "holiday", "unmarked", "percent"]));
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3 print:hidden"><h1 className="mr-auto text-2xl font-bold">{x("হাজিরা রিপোর্ট")}</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-3 print:hidden"><h1 className="mr-auto text-3xl text-brand-dark">{x("হাজিরা রিপোর্ট")}</h1>
         {type !== "absent" && rows.length > 0 && <button className="btn-ghost" onClick={exportCsv}>CSV</button>}<button className="btn-ghost" onClick={() => window.print()}>{x("প্রিন্ট")}</button></div>
       <div className="mb-4 flex gap-2 border-b print:hidden">{tabs.map(([k, l]) => <button key={k} onClick={() => { setType(k); setD(null); }} className={`px-4 py-2 font-semibold ${type === k ? "border-b-4 border-gold text-brand" : "text-slate-600"}`}>{l}</button>)}</div>
       <div className="mb-4 flex flex-wrap gap-3 print:hidden">
@@ -45,7 +46,7 @@ export default function Report() {
       </div>
       {err && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <div className="hidden print:block"><h2 className="text-xl font-bold">{st.schoolName}</h2><p>{type === "absent" ? x("অনুপস্থিতের তালিকা — {0}", fmtDate(date)) : x("{0} হাজিরা রিপোর্ট — {1}{2}", type === "staff" ? x("স্টাফ") : x("শিক্ষার্থী"), type === "student" ? x(cls) + " · " : "", period)}</p></div>
-      {loading && <p>{x("লোড হচ্ছে...")}</p>}
+      {loading && <Loader compact label={x("লোড হচ্ছে...")} />}
       {d && type === "absent" && <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{["শ্রেণি", "রোল", "নাম", "অভিভাবকের ফোন"].map((h) => <th key={h} className="th">{x(h)}</th>)}</tr></thead>
         <tbody>{d.items.map((i) => <tr key={i._id}><td className="td">{x(i.student.class)}</td><td className="td">{n(i.student.roll)}</td><td className="td">{i.student.name}</td><td className="td">{i.student.guardianPhone || i.student.phone || "—"}</td></tr>)}{d.items.length === 0 && <tr><td className="td py-8 text-center text-slate-500" colSpan={4}>{x("এই দিনে কেউ অনুপস্থিত নেই (বা হাজিরা নেওয়া হয়নি)")}</td></tr>}</tbody></table></div>}
       {d && type !== "absent" && <>

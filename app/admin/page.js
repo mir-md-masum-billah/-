@@ -5,6 +5,7 @@ import useMe from "@/hooks/useMe";
 import { api } from "@/components/CrudPage";
 import Icon from "@/components/Icon";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
 
 const ymNow = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
 
@@ -36,7 +37,7 @@ export default function Dashboard() {
   useEffect(() => { if (me?.perms?.includes("accounts.read")) api("GET", `/api/accounts/summary?from=${range.from}&to=${range.to}`).then((r) => r.ok && setSum(r.d)); }, [me, range]);
 
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
-  if (!s) return <p className="text-slate-500">{x("লোড হচ্ছে...")}</p>;
+  if (!s) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const max = sum ? Math.max(1, ...sum.monthly.map((m) => Math.max(m.income, m.expense))) : 1;
   const hasPeople = s.students !== undefined || s.teachers !== undefined;
   const hasMoney = s.outstanding !== undefined || s.feeCollected !== undefined;

@@ -22,11 +22,11 @@ export default function Import() {
   return (
     <div className="max-w-3xl space-y-4">
       <Link href="/admin/students" className="text-brand">{x("← শিক্ষার্থী তালিকা")}</Link>
-      <h1 className="text-2xl font-bold">{x("শিক্ষার্থী আমদানি (CSV)")}</h1>
+      <h1 className="text-3xl text-brand-dark">{x("শিক্ষার্থী আমদানি (CSV)")}</h1>
       <div className="card space-y-3 text-sm"><p>{x("Excel/Google Sheets থেকে CSV (UTF-8) হিসেবে সংরক্ষণ করুন। শুধু name ও class আবশ্যক; আইডি, রোল ফাঁকা থাকলে স্বয়ংক্রিয় বসবে, পাসওয়ার্ড সবার জন্য স্বয়ংক্রিয়। একটি সারিতেও ভুল থাকলে কাউকে আমদানি করা হয় না। সর্বোচ্চ ২০০ জন।")}</p>
         <button className="btn-ghost" onClick={() => download("student-template.csv", toCSV([{ name: "নমুনা শিক্ষার্থী", class: "৫ম", section: "", roll: "", fatherName: "নমুনা পিতা", guardianPhone: "01712345678", monthlyFee: 500 }], COLS))}>{x("নমুনা ফাইল নামান")}</button>
         <input type="file" accept=".csv,text/csv" onChange={file} /></div>
-      {msg && <p className="rounded-lg bg-brand-light p-3 font-semibold text-brand">{msg}</p>}
+      {msg && <p className="rounded-lg bg-brand-light p-3 font-semibold text-brand">{String(msg).replace(/^[✅❌⚠️\s]+/u, "")}</p>}
       {errs.length > 0 && <div className="card border-red-300"><h2 className="mb-2 font-bold text-red-700">{x("{0} টি ভুল — ঠিক করে আবার দিন", errs.length)}</h2><ul className="max-h-64 overflow-y-auto text-sm">{errs.map((e, i) => <li key={i} className="border-b border-slate-100 py-1">{x("সারি")} {e.row}: {e.error}</li>)}</ul></div>}
       {ok && <button className="btn-primary" disabled={busy} onClick={go}>{busy ? x("আমদানি হচ্ছে...") : x("{0} জনকে আমদানি করুন", rows.length)}</button>}
       {creds && <div className="card space-y-2"><p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{x("পাসওয়ার্ড আর দেখানো হবে না। এখনই ফাইল নামিয়ে নিরাপদে রাখুন এবং অভিভাবকদের দিন।")}</p>

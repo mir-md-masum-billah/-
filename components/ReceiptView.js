@@ -5,6 +5,8 @@ import Crest from "./Crest";
 import Icon from "./Icon";
 import { methodLabel } from "@/lib/school";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
+import { realOnly } from "@/lib/school";
 
 // অ্যাডমিন ও শিক্ষার্থী — দুই জায়গার রসিদই এই একটি কম্পোনেন্ট থেকে আসে
 export default function ReceiptView({ id }) {
@@ -12,7 +14,7 @@ export default function ReceiptView({ id }) {
   const [d, setD] = useState(null); const [err, setErr] = useState("");
   useEffect(() => { api("GET", `/api/receipt/${id}`).then((r) => (r.ok ? setD(r.d) : setErr(r.d.error || x("রসিদ পাওয়া যায়নি")))); }, [id]);
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
-  if (!d) return <p className="text-slate-500">{x("লোড হচ্ছে...")}</p>;
+  if (!d) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const { payment: p, invoice: i, student: s, school, balance } = d;
   return (
     <div className="mx-auto max-w-2xl">
@@ -22,7 +24,7 @@ export default function ReceiptView({ id }) {
           <div className="border-b border-gold/60 pb-5 text-center">
             {school.logo ? <img src={school.logo} alt="" className="mx-auto mb-2 h-14" /> : <Crest className="mx-auto mb-2 h-12 w-auto text-gold-deep" />}
             <h1 className="text-3xl text-brand-dark">{school.name}</h1>
-            <p className="mt-1 text-sm text-slate-600">{school.address} {school.phone && "· " + school.phone}</p>
+            <p className="mt-1 text-sm text-slate-600">{[realOnly(school.address), realOnly(school.phone)].filter(Boolean).join(" · ")}</p>
             <p className="mt-3 inline-block rounded-sm border border-gold bg-gold-light px-4 py-0.5 font-semibold text-brand-dark">{p.type === "refund" ? x("রিফান্ড ভাউচার") : x("টাকা প্রাপ্তির রসিদ")}</p>
           </div>
           {p.voided && <p className="mt-4 flex items-center justify-center gap-2 rounded bg-red-100 p-2 text-center font-bold text-red-700"><Icon name="warn" className="h-5 w-5" /> {x("এই লেনদেন বাতিল — কারণ: {0}", p.voidReason)}</p>}

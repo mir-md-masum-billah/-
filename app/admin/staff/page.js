@@ -3,10 +3,11 @@ import CrudPage from "@/components/CrudPage";
 import useMe from "@/hooks/useMe";
 import { useLang } from "@/components/LangProvider";
 import { roleLabel, STAFF_ROLES, canAssignRole } from "@/lib/rbac";
+import Loader from "@/components/Loader";
 
 export default function Page() {
   const me = useMe(); const { x } = useLang();
-  if (!me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   return (
     <CrudPage
       resource="staff" title="শিক্ষক ও স্টাফ" addLabel="নতুন স্টাফ" canWrite={me.perms.includes("staff.write")}

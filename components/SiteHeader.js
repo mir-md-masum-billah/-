@@ -5,6 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 import Icon from "./Icon";
 import { getLang } from "@/lib/lang";
 import { tr } from "@/lib/translations";
+import { getDashboardHref } from "@/lib/session";
 
 export function Mark({ logo, className = "h-9" }) {
   return logo
@@ -15,6 +16,7 @@ export function Mark({ logo, className = "h-9" }) {
 // পাবলিক পেজগুলোর সাধারণ হেডার (সার্ভার কম্পোনেন্ট) — ভাষা বদলের বাটনসহ
 export default async function SiteHeader({ name, logo, current }) {
   const t = tr(await getLang());
+  const dash = await getDashboardHref();
   const links = [
     { href: "/#about", label: t.nav.about, key: "about" },
     { href: "/notices", label: t.nav.notices, key: "notices" },
@@ -37,7 +39,7 @@ export default async function SiteHeader({ name, logo, current }) {
           ))}
           <LanguageSwitch className="sm:mr-1" />
           <ThemeToggle className="!hidden sm:!grid" />
-          <Link href="/login" className="btn-gold !px-4 !py-2 sm:!px-5">{t.nav.login}</Link>
+          <Link href={dash || "/login"} className="btn-gold !px-4 !py-2 sm:!px-5">{dash ? t.nav.dashboard : t.nav.login}</Link>
           <details className="group relative md:hidden">
             <summary aria-label={t.nav.menu} className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-full border border-gold-soft/40 text-gold-soft [&::-webkit-details-marker]:hidden"><Icon name="menu" className="h-5 w-5" /></summary>
             <div className="absolute right-0 top-11 z-40 w-56 rounded-xl border border-gold/30 bg-night p-2 shadow-gilt">

@@ -3,10 +3,11 @@ import CrudPage from "@/components/CrudPage";
 import useMe from "@/hooks/useMe";
 import { useLang } from "@/components/LangProvider";
 import { yearDhaka } from "@/lib/dates";
+import Loader from "@/components/Loader";
 
 export default function Page() {
   const me = useMe(); const { x, n } = useLang();
-  if (!me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   return (
     <CrudPage
       resource="results" title="পরীক্ষার ফলাফল" addLabel="নম্বর যোগ" canWrite={me.perms.includes("results.write")} deleteConfirm="নম্বর মুছবেন? (অডিট লগে আগের মান থাকবে)"

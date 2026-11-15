@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { school } from "@/lib/school";
 import { schoolEn } from "@/lib/translations";
@@ -15,6 +15,11 @@ export default function Login() {
   const [f, setF] = useState({ userId: "", password: "" });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // আগে থেকেই লগইন থাকলে লগইন ফর্ম না দেখিয়ে সরাসরি ড্যাশবোর্ডে
+  useEffect(() => {
+    fetch("/api/auth/me").then((r) => r.json()).then((m) => { if (m?.role) location.replace(m.role === "student" ? "/student" : "/admin"); }).catch(() => {});
+  }, []);
 
   async function submit(e) {
     e.preventDefault(); setBusy(true); setErr("");

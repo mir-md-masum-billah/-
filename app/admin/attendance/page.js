@@ -5,6 +5,8 @@ import useMe from "@/hooks/useMe";
 import { api, Toast } from "@/components/CrudPage";
 import { todayDhaka } from "@/lib/dates";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
+import { confirmBox } from "@/components/Dialog";
 
 const ST = [["present", "উপস্থিত", "bg-brand text-white"], ["absent", "অনুপস্থিত", "bg-red-600 text-white"], ["late", "দেরি", "bg-gold text-ink"], ["leave", "ছুটি", "bg-slate-600 text-white"], ["holiday", "হলিডে", "bg-sky-600 text-white"]];
 
@@ -34,7 +36,7 @@ export default function Attendance() {
   const markAll = (k) => setStatus((p) => { const n = { ...p }; view.forEach((s) => { if (!n[s._id]) n[s._id] = k; }); return n; }); // শুধু অচিহ্নিতদের
 
   async function save() {
-    if (unmarked && !confirm(x("{0} জন অচিহ্নিত থাকবে (হাজিরা সংরক্ষিত হবে না)। এগিয়ে যাবেন?", unmarked))) return;
+    if (unmarked && !(await confirmBox(x("{0} জন অচিহ্নিত থাকবে (হাজিরা সংরক্ষিত হবে না)। এগিয়ে যাবেন?", unmarked)))) return;
     setBusy(true);
     const records = view.filter((s) => status[s._id]).map((s) => ({ student: s._id, status: status[s._id] }));
     const r = await api("POST", "/api/attendance/bulk", { date, class: cls, section: section || undefined, records });
@@ -42,11 +44,11 @@ export default function Attendance() {
     if (!r.ok) return setErr(r.d.error || x("সংরক্ষণ ব্যর্থ"));
     setErr(""); setSaved({ ...status }); setToast(x("✅ নতুন {0}, সংশোধন {1}, অপরিবর্তিত {2}", r.d.created, r.d.corrected, r.d.unchanged)); setTimeout(() => setToast(""), 3000);
   }
-  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const canWrite = me.perms.includes("attendance.write");
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">{x("হাজিরা")}</h1>
+      <h1 className="mb-4 text-3xl text-brand-dark">{x("হাজিরা")}</h1>
       <div className="mb-4 flex flex-wrap gap-3">
         <select className="input !w-auto" value={cls} onChange={(e) => setCls(e.target.value)} aria-label={x("শ্রেণি")}>{st.classes.map((c) => <option key={c.name} value={c.name}>{x(c.name)}</option>)}</select>
         {(st.classes.find((c) => c.name === cls)?.sections || []).length > 0 && <select className="input !w-auto" value={section} onChange={(e) => setSection(e.target.value)} aria-label={x("শাখা")}><option value="">{x("সব শাখা")}</option>{st.classes.find((c) => c.name === cls).sections.map((sc) => <option key={sc}>{sc}</option>)}</select>}
@@ -55,7 +57,7 @@ export default function Attendance() {
       </div>
       <p className="mb-3 text-sm text-slate-700">{x("উপস্থিত {0} · অনুপস্থিত {1} · দেরি {2} · ছুটি {3} · হলিডে {4} ·", count("present"), count("absent"), count("late"), count("leave"), count("holiday"))} <b className={unmarked ? "text-red-600" : ""}>{x("অচিহ্নিত {0}", unmarked)}</b></p>
       {err && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
-      {loading ? <p>{x("লোড হচ্ছে...")}</p> : (
+      {loading ? <Loader compact label={x("লোড হচ্ছে...")} /> : (
         <div className="space-y-2">
           {view.length === 0 && <p className="card text-slate-500">{x("এই শ্রেণিতে কোনো সক্রিয় শিক্ষার্থী নেই।")}</p>}
           {view.map((s) => (

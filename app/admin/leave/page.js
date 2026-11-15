@@ -5,6 +5,8 @@ import { useLang } from "@/components/LangProvider";
 import Modal from "@/components/Modal";
 import { api, Pager, Toast } from "@/components/CrudPage";
 import { todayDhaka } from "@/lib/dates";
+import Loader from "@/components/Loader";
+import { confirmBox } from "@/components/Dialog";
 
 const SL = { pending: ["অপেক্ষমাণ", "bg-amber-100 text-amber-800"], approved: ["অনুমোদিত", "bg-brand-light text-brand"], rejected: ["প্রত্যাখ্যাত", "bg-red-100 text-red-700"], cancelled: ["বাতিলকৃত", "bg-slate-100 text-slate-600"] };
 export default function Leave() {
@@ -15,11 +17,11 @@ export default function Leave() {
   const load = useCallback(async () => { const r = await api("GET", `/api/leaves?page=${page}&limit=20${status ? "&status=" + status : ""}${kind ? "&kind=" + kind : ""}`); if (r.ok) setD(r.d); else setErr(r.d.error || "লোড করা যায়নি"); }, [page, status, kind]);
   useEffect(() => { load(); }, [load]); useEffect(() => setPage(1), [status, kind]);
   async function send(e, method, url, body, msg) { e.preventDefault?.(); setBusy(true); setMErr(""); const r = await api(method, url, body); setBusy(false); if (!r.ok) { setMErr(r.d.error || x("সমস্যা হয়েছে")); return; } setM(null); flash(msg(r.d)); load(); }
-  if (!me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const approver = me.perms.includes("leave.approve");
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-2xl font-bold">{x("ছুটি")}</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-3xl text-brand-dark">{x("ছুটি")}</h1>
         {approver && <select className="input !w-auto" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">{x("স্টাফ+শিক্ষার্থী")}</option><option value="staff">{x("স্টাফ")}</option><option value="student">{x("শিক্ষার্থী")}</option></select>}
         <select className="input !w-auto" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">{x("সব অবস্থা")}</option>{Object.entries(SL).map(([k, v]) => <option key={k} value={k}>{x(v[0])}</option>)}</select>
         <button className="btn-primary" onClick={() => { setMErr(""); setForm({ from: todayDhaka(), to: todayDhaka() }); setM({ type: "apply" }); }}>{x("+ ছুটির আবেদন")}</button></div>
@@ -27,8 +29,8 @@ export default function Leave() {
       <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[640px]"><thead><tr>{["আবেদনকারী", "তারিখ", "কারণ", "অবস্থা", ""].map((h) => <th key={h} className="th">{x(h)}</th>)}</tr></thead>
         <tbody>{d.items.map((l) => <tr key={l._id}><td className="td">{l.kind === "student" ? `${l.student?.name} (${x(l.student?.class)}-${n(l.student?.roll)})` : l.user?.name}<span className="block text-xs text-slate-500">{l.kind === "student" ? x("শিক্ষার্থী") : x("স্টাফ")}</span></td><td className="td whitespace-nowrap">{date(l.from)}{l.to !== l.from && ` → ${date(l.to)}`}</td><td className="td">{l.reason}</td>
           <td className="td"><span className={`rounded px-2 py-0.5 text-xs ${SL[l.status][1]}`}>{x(SL[l.status][0])}</span>{l.decisionNote && <span className="block text-xs text-slate-500">{l.decidedByName}: {l.decisionNote}</span>}</td>
-          <td className="td whitespace-nowrap text-right">{l.status === "pending" && <>{approver && !(l.kind === "staff" && String(l.user?._id) === me.id) && <><button className="mr-3 font-semibold text-brand" onClick={(e) => confirm(x("অনুমোদন করবেন?")) && send(e, "POST", `/api/leaves/${l._id}/decide`, { approve: true }, (r) => x("✅ অনুমোদিত") + (r.applied ? x(" — {0} দিনের হাজিরায় ছুটি বসেছে", r.applied) : ""))}>{x("অনুমোদন")}</button><button className="mr-3 font-semibold text-red-600" onClick={() => { setMErr(""); setForm({}); setM({ type: "reject", l }); }}>{x("প্রত্যাখ্যান")}</button></>}
-            {((l.kind === "staff" && String(l.user?._id) === me.id) || (l.kind === "student" && false)) && <button className="font-semibold text-slate-600" onClick={(e) => confirm(x("আবেদন বাতিল করবেন?")) && send(e, "DELETE", `/api/leaves/${l._id}`, null, () => x("✅ বাতিল"))}>{x("বাতিল")}</button>}</>}</td></tr>)}
+          <td className="td whitespace-nowrap text-right">{l.status === "pending" && <>{approver && !(l.kind === "staff" && String(l.user?._id) === me.id) && <><button className="mr-3 font-semibold text-brand" onClick={async (e) => (await confirmBox(x("অনুমোদন করবেন?"))) && send(e, "POST", `/api/leaves/${l._id}/decide`, { approve: true }, (r) => x("✅ অনুমোদিত") + (r.applied ? x(" — {0} দিনের হাজিরায় ছুটি বসেছে", r.applied) : ""))}>{x("অনুমোদন")}</button><button className="mr-3 font-semibold text-red-600" onClick={() => { setMErr(""); setForm({}); setM({ type: "reject", l }); }}>{x("প্রত্যাখ্যান")}</button></>}
+            {((l.kind === "staff" && String(l.user?._id) === me.id) || (l.kind === "student" && false)) && <button className="font-semibold text-slate-600" onClick={async (e) => (await confirmBox(x("আবেদন বাতিল করবেন?"), { danger: true })) && send(e, "DELETE", `/api/leaves/${l._id}`, null, () => x("✅ বাতিল"))}>{x("বাতিল")}</button>}</>}</td></tr>)}
           {d.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={5}>{x("কোনো আবেদন নেই")}</td></tr>}</tbody></table></div>
       <Pager page={page} pages={d.pages} total={d.total} setPage={setPage} />
       {m?.type === "apply" && <Modal title={x("ছুটির আবেদন")} onClose={() => setM(null)}><form className="space-y-3" onSubmit={(e) => send(e, "POST", "/api/leaves", form, () => x("✅ আবেদন জমা হয়েছে"))}>

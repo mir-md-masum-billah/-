@@ -5,6 +5,8 @@ import Modal from "@/components/Modal";
 import useMe from "@/hooks/useMe";
 import { api, Toast } from "@/components/CrudPage";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
+import { confirmBox } from "@/components/Dialog";
 
 const T = { admission: "ভর্তি", promotion: "প্রমোশন", class_change: "শ্রেণি/রোল পরিবর্তন", transferred: "বদলি", passed: "পাস করে বের", dropped: "ঝরে পড়া", reactivated: "পুনরায় সক্রিয়" };
 const SL = { active: "সক্রিয়", transferred: "বদলি হয়েছে", passed: "পাস করেছে", dropped: "ঝরে পড়েছে" };
@@ -18,7 +20,7 @@ export default function Profile({ params }) {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api("GET", "/api/subjects?type=optional&limit=200").then((r) => r.ok && setSubs(r.d.items)); }, []);
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
-  if (!d || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!d || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const s = d.student, can = (p) => me.perms.includes(p);
   const mySubs = (s.optionalSubjects || []).map((o) => o._id);
   const offered = subs.filter((o) => !o.classes?.length || o.classes.includes(s.class));
@@ -37,7 +39,7 @@ export default function Profile({ params }) {
       <Link href="/admin/students" className="text-brand print:hidden">{x("← শিক্ষার্থী তালিকা")}</Link>
       <div className="card flex flex-wrap items-center gap-4">
         {s.photo ? <img src={s.photo} alt="" className="h-24 w-24 rounded-full object-cover" /> : <div className="grid h-24 w-24 place-items-center rounded-full bg-brand-light text-4xl font-bold text-brand">{s.name[0]}</div>}
-        <div className="mr-auto"><h1 className="text-2xl font-bold">{s.name}</h1><p className="text-slate-600">{x("আইডি")} {s.studentId} · {x("শ্রেণি")} {x(s.class)}{s.section ? ` (${s.section})` : ""} · {x("রোল")} {s.roll}{s.session ? ` · ${x("সেশন")} ${s.session}` : ""}</p>
+        <div className="mr-auto"><h1 className="text-3xl text-brand-dark">{s.name}</h1><p className="text-slate-600">{x("আইডি")} {s.studentId} · {x("শ্রেণি")} {x(s.class)}{s.section ? ` (${s.section})` : ""} · {x("রোল")} {s.roll}{s.session ? ` · ${x("সেশন")} ${s.session}` : ""}</p>
           <p className="mt-1"><span className={`rounded px-2 py-0.5 text-sm ${s.status === "active" ? "bg-brand-light text-brand" : "bg-amber-100 text-amber-800"}`}>{x(SL[s.status || "active"])}</span>{s.leftReason && <span className="ml-2 text-sm text-slate-500">{s.leftDate && date(s.leftDate)} · {s.leftReason}</span>}</p></div>
         {d.due !== undefined && <div className="text-right"><p className="text-sm text-slate-500">{x("বকেয়া ফি")}</p><p className={`text-xl font-bold ${d.due > 0 ? "text-red-600" : "text-brand"}`}>{money(d.due)}</p></div>}
         {can("students.promote") && <div className="flex gap-2 print:hidden">
@@ -50,7 +52,7 @@ export default function Profile({ params }) {
           {[["লিঙ্গ", { male: x("ছেলে"), female: x("মেয়ে"), other: x("অন্যান্য") }[s.gender]], ["জন্ম তারিখ", s.dob && date(s.dob)], ["জন্মনিবন্ধন নং", s.birthRegNo], ["পিতা", s.fatherName], ["মাতা", s.motherName], ["অভিভাবক", s.guardianName], ["অভিভাবকের ফোন", s.guardianPhone], ["ফোন", [s.phone, ...(s.otherPhones || [])].filter(Boolean).join(", ")], ["ঠিকানা", s.address], ["আগের স্কুল", [s.previousSchool, s.previousClass && x(s.previousClass)].filter(Boolean).join(" — ")], ["ভর্তির তারিখ", s.admissionDate && date(s.admissionDate)], ["মাসিক বেতন", money(s.monthlyFee)]].map(([k, v]) => <p key={k} className="border-b border-slate-100 py-1.5 last:border-0"><span className="text-slate-500">{x(k)}: </span>{v || "—"}</p>)}</div>
         <div className="space-y-4">
           <div className="card"><div className="mb-2 flex items-center justify-between"><h2 className="font-bold">{x("ভর্তির কাগজপত্র")}</h2>{can("students.write") && <button className="btn-ghost !py-1.5 print:hidden" onClick={() => { setMErr(""); setForm({}); setModal("doc"); }}>{x("+ কাগজ")}</button>}</div>
-            {s.documents?.length ? s.documents.map((o) => <div key={o._id} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><a href={o.url} target="_blank" className="text-brand underline">{o.name}</a>{can("students.write") && <button className="text-red-600" onClick={() => confirm(x("মুছবেন?")) && act("DELETE", `/api/students/${id}/documents?doc=${o._id}`, null, () => x("✅ মোছা হয়েছে"))}>{x("মুছুন")}</button>}</div>) : <p className="text-sm text-slate-500">{x("কোনো কাগজ নেই")}</p>}</div>
+            {s.documents?.length ? s.documents.map((o) => <div key={o._id} className="flex justify-between border-b border-slate-100 py-1.5 text-sm last:border-0"><a href={o.url} target="_blank" className="text-brand underline">{o.name}</a>{can("students.write") && <button className="text-red-600" onClick={async () => (await confirmBox(x("মুছবেন?"), { danger: true })) && act("DELETE", `/api/students/${id}/documents?doc=${o._id}`, null, () => x("✅ মোছা হয়েছে"))}>{x("মুছুন")}</button>}</div>) : <p className="text-sm text-slate-500">{x("কোনো কাগজ নেই")}</p>}</div>
           <div className="card"><h2 className="mb-2 font-bold">{x("ঐচ্ছিক বিষয়")}</h2>
             {offered.length === 0 ? <p className="text-sm text-slate-500">{x("এই শ্রেণিতে কোনো ঐচ্ছিক বিষয় নেই")}</p> : offered.map((o) => <label key={o._id} className="flex items-center gap-2 py-1"><input type="checkbox" disabled={!can("students.write") || busy} checked={mySubs.includes(o._id)} onChange={() => toggleSub(o._id)} />{o.name}</label>)}</div>
         </div>

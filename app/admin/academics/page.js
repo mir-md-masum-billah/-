@@ -4,10 +4,11 @@ import CrudPage from "@/components/CrudPage";
 import useSettings from "@/hooks/useSettings";
 import useMe from "@/hooks/useMe";
 import { useLang } from "@/components/LangProvider";
+import Loader from "@/components/Loader";
 
 export default function Academics() {
   const st = useSettings(); const me = useMe(); const { x } = useLang(); const [tab, setTab] = useState("assign");
-  if (!st || !me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const w = me.perms.includes("academics.manage"); const classes = st.classes.map((c) => c.name);
   return (
     <div>

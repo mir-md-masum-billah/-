@@ -19,7 +19,13 @@ export const PUT = handle(async (req) => {
   await connectDB();
   const b = await req.json();
   const upd = {};
-  for (const k of ["schoolName", "logo", "address", "phone", "email", "about", "tagline", "currentSession"]) if (b[k] !== undefined) upd[k] = String(b[k]).trim().slice(0, 500);
+  for (const k of ["schoolName", "address", "phone", "email", "about", "tagline", "currentSession"]) if (b[k] !== undefined) upd[k] = String(b[k]).trim().slice(0, 500);
+  if (b.logo !== undefined) { // খালি (সরানো), http(s)/সাইটের ঠিকানা, অথবা ব্রাউজারে ছোট করা ছবি (data URL)
+    const v = String(b.logo).trim();
+    if (v && !/^(https?:\/\/|\/)\S{1,500}$/.test(v) && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v)) throw bad("লোগো সঠিক ছবি নয়");
+    if (v.length > 150000) throw bad("লোগোর ছবি অনেক বড়");
+    upd.logo = v;
+  }
   if (upd.schoolName === "") throw bad("স্কুলের নাম দিন");
   if (b.classes !== undefined) {
     if (!Array.isArray(b.classes) || !b.classes.length) throw bad("কমপক্ষে একটি শ্রেণি দিন");

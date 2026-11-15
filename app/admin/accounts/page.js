@@ -6,6 +6,8 @@ import { api, Pager, Toast } from "@/components/CrudPage";
 import { incomeCats, expenseCats, methodLabel } from "@/lib/school";
 import { useLang } from "@/components/LangProvider";
 import { todayDhaka } from "@/lib/dates";
+import Loader from "@/components/Loader";
+import { promptBox } from "@/components/Dialog";
 
 const first = () => todayDhaka().slice(0, 8) + "01";
 export default function Accounts() {
@@ -27,7 +29,7 @@ export default function Accounts() {
   }, [range, page, dq, type, account, x]);
   useEffect(() => { load(); }, [load]);
 
-  if (!me) return <p>{x("লোড হচ্ছে...")}</p>;
+  if (!me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const canW = me.perms.includes("accounts.write");
   const cats = form.type === "income" ? Object.entries(incomeCats).filter(([k]) => k !== "fee") : Object.entries(expenseCats).filter(([k]) => k !== "refund");
   async function save(e) {
@@ -37,7 +39,7 @@ export default function Accounts() {
     setModal(false); flash(x("✅ এন্ট্রি যোগ হয়েছে")); load();
   }
   async function voidE(e) {
-    const reason = prompt(x("বাতিলের কারণ:")); if (!reason) return;
+    const reason = await promptBox(x("বাতিলের কারণ:"), { danger: true }); if (!reason) return;
     const r = await api("DELETE", `/api/ledger/${e._id}`, { reason }); if (!r.ok) return flash(r.d.error || x("সমস্যা হয়েছে")); flash(x("✅ বাতিল হয়েছে")); load();
   }
   const label = (e) => { const t = e.type === "income" ? incomeCats[e.category] : expenseCats[e.category]; return t ? x(t) : e.category; };
@@ -45,13 +47,13 @@ export default function Accounts() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 print:hidden">
-        <h1 className="mr-auto text-2xl font-bold">{x("হিসাব নিকাশ")}</h1>
+        <h1 className="mr-auto text-3xl text-brand-dark">{x("হিসাব নিকাশ")}</h1>
         <input type="date" className="input !w-auto" value={range.from} max={range.to} onChange={(e) => setRange({ ...range, from: e.target.value })} aria-label={x("শুরু")} />
         <input type="date" className="input !w-auto" value={range.to} min={range.from} max={todayDhaka()} onChange={(e) => setRange({ ...range, to: e.target.value })} aria-label={x("শেষ")} />
         <button className="btn-ghost" onClick={() => window.print()}>{x("প্রিন্ট")}</button>
         {canW && <button className="btn-primary" onClick={() => { setMErr(""); setForm({ type: "expense", date: todayDhaka(), account: "cash" }); setModal(true); }}>{x("+ আয়/ব্যয় এন্ট্রি")}</button>}
       </div>
-      <div className="hidden print:block"><h1 className="text-xl font-bold">{x("আয়-ব্যয় বিবরণী: {0} থেকে {1}", date(range.from), date(range.to))}</h1></div>
+      <div className="hidden print:block"><h1 className="text-xl">{x("আয়-ব্যয় বিবরণী: {0} থেকে {1}", date(range.from), date(range.to))}</h1></div>
       {err && <p className="rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       {sum && <>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
