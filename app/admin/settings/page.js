@@ -44,7 +44,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl text-brand-dark">{x("সেটিংস")}</h1>
       {err && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <section className="card space-y-3"><h2 className="font-bold">{x("স্কুলের তথ্য")}</h2>
-        <div className="grid gap-3 sm:grid-cols-2">{info("schoolName", "স্কুলের নাম")}{info("tagline", "স্লোগান")}{info("address", "ঠিকানা")}{info("phone", "ফোন")}{info("email", "ইমেইল")}{info("currentSession", "চলতি শিক্ষাবর্ষ (যেমন ২০২৬)")}</div>
+        <div className="grid gap-3 sm:grid-cols-2">{info("schoolName", "স্কুলের বাংলা নাম")}{info("schoolNameEn", "স্কুলের ইংরেজি নাম (English name)")}{info("tagline", "স্লোগান (বাংলা)")}{info("taglineEn", "Slogan (English)")}{info("address", "ঠিকানা")}{info("phone", "ফোন")}{info("email", "ইমেইল")}{info("currentSession", "চলতি শিক্ষাবর্ষ (যেমন ২০২৬)")}</div>
         <div><span className="label">{x("স্কুলের লোগো")}</span>
           <div className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed border-slate-300 p-4">
             <span className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full bg-night ring-2 ring-gold/60">
@@ -61,15 +61,32 @@ export default function SettingsPage() {
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={pickLogo} />
           </div></div>
         <div><label className="label">{x("পরিচিতি")}</label><textarea rows={3} className="input" value={s.about || ""} onChange={(e) => setS({ ...s, about: e.target.value })} /></div>
-        <button className="btn-primary" onClick={() => save({ schoolName: s.schoolName, tagline: s.tagline, address: s.address, phone: s.phone, email: s.email, currentSession: s.currentSession, logo: s.logo, about: s.about })}>{x("সংরক্ষণ")}</button></section>
+        <button className="btn-primary" onClick={() => save({ schoolName: s.schoolName, schoolNameEn: s.schoolNameEn || "", taglineEn: s.taglineEn || "", tagline: s.tagline, address: s.address, phone: s.phone, email: s.email, currentSession: s.currentSession, logo: s.logo, about: s.about })}>{x("সংরক্ষণ")}</button></section>
 
       <section className="card space-y-3"><h2 className="font-bold">{x("শ্রেণি ও শাখা")}</h2><p className="text-sm text-slate-600">{x("শাখা কমা দিয়ে লিখুন (যেমন: ক, খ)। শিক্ষার্থী আছে এমন শ্রেণি মুছা যাবে না।")}</p>
         {s.classText.map((c, i) => <div key={i} className="flex gap-2"><input className="input !w-40" value={c.name} onChange={(e) => { const n = [...s.classText]; n[i] = { ...c, name: e.target.value }; setS({ ...s, classText: n }); }} /><input className="input" placeholder={x("শাখা")} value={c.sections} onChange={(e) => { const n = [...s.classText]; n[i] = { ...c, sections: e.target.value }; setS({ ...s, classText: n }); }} /><button className="px-2 text-red-600" aria-label={x("মুছুন")} onClick={() => setS({ ...s, classText: s.classText.filter((_, j) => j !== i) })}>✕</button></div>)}
         <div className="flex gap-3"><button className="btn-ghost" onClick={() => setS({ ...s, classText: [...s.classText, { name: "", sections: "" }] })}>{x("+ শ্রেণি যোগ")}</button>
           <button className="btn-primary" onClick={() => save({ classes: s.classText.map((c) => ({ name: c.name, sections: c.sections.split(/[,،]/).map((x) => x.trim()).filter(Boolean) })) })}>{x("সংরক্ষণ")}</button></div></section>
 
+      <section className="card space-y-4"><h2 className="font-bold">{x("পেমেন্ট মাধ্যম (শিক্ষার্থীর অনলাইন পেমেন্টের জন্য)")}</h2>
+        <p className="text-sm text-slate-600">{x("যে মাধ্যমগুলো \"সক্রিয়\" থাকবে শুধু সেগুলোই শিক্ষার্থী পেমেন্টের সময় দেখবে। ক্যাশ পেমেন্ট অফিসে আলাদাভাবে রেকর্ড হয়।")}</p>
+        {(s.paymentMethods || []).map((m, i) => { const set = (k, v) => setS({ ...s, paymentMethods: s.paymentMethods.map((y, j) => (j === i ? { ...y, [k]: v } : y)) });
+          return <div key={m.id || i} className={`space-y-3 rounded-xl border p-4 ${m.active === false ? "border-slate-200 bg-slate-50 opacity-80" : "border-gold/50"}`}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><label className="label">{x("মাধ্যমের ধরন")}</label><select className="input" value={m.kind} onChange={(e) => set("kind", e.target.value)}>{[["bkash", "বিকাশ (bKash)"], ["nagad", "নগদ (Nagad)"], ["rocket", "রকেট (Rocket)"], ["bank", "ব্যাংক অ্যাকাউন্ট"], ["other", "অন্যান্য"]].map(([k, l]) => <option key={k} value={k}>{x(l)}</option>)}</select></div>
+              <div><label className="label">{x("প্রদর্শিত নাম")}</label><input className="input" value={m.label || ""} onChange={(e) => set("label", e.target.value)} placeholder={x("যেমন: বিকাশ (পার্সোনাল)")} /></div>
+              <div><label className="label">{m.kind === "bank" ? x("ব্যাংক অ্যাকাউন্ট নম্বর") : x("নম্বর / অ্যাকাউন্ট নম্বর")}</label><input className="input" value={m.accountNumber || ""} onChange={(e) => set("accountNumber", e.target.value)} /></div>
+              <div><label className="label">{x("অ্যাকাউন্টের ধরন")}</label><input className="input" value={m.accountType || ""} onChange={(e) => set("accountType", e.target.value)} placeholder={m.kind === "bank" ? x("যেমন: Current / Savings") : x("যেমন: Personal / Agent / Merchant")} /></div>
+              {(m.kind === "bank" || m.kind === "other") && <div className="sm:col-span-2"><label className="label">{m.kind === "bank" ? x("অ্যাকাউন্টের নাম ও ব্যাংকের শাখা") : x("অ্যাকাউন্টের নাম")}</label><input className="input" value={m.accountName || ""} onChange={(e) => set("accountName", e.target.value)} /></div>}
+              <div className="sm:col-span-2"><label className="label">{x("শিক্ষার্থীর জন্য নির্দেশনা")}</label><textarea rows={2} className="input" value={m.instructions || ""} onChange={(e) => set("instructions", e.target.value)} placeholder={x("যেমন: Send Money করুন, Reference-এ আপনার আইডি লিখুন")} /></div>
+            </div>
+            <div className="flex items-center justify-between"><label className="flex items-center gap-2 font-semibold"><input type="checkbox" checked={m.active !== false} onChange={(e) => set("active", e.target.checked)} /> {x("সক্রিয় (শিক্ষার্থীরা দেখবে)")}</label><button type="button" className="text-red-600" onClick={() => setS({ ...s, paymentMethods: s.paymentMethods.filter((_, j) => j !== i) })}>{x("মুছুন")}</button></div>
+          </div>; })}
+        <div className="flex flex-wrap gap-2"><button type="button" className="btn-ghost" onClick={() => setS({ ...s, paymentMethods: [...(s.paymentMethods || []), { kind: "bkash", label: "", accountNumber: "", accountType: "Personal", active: true }] })}>{x("+ পেমেন্ট মাধ্যম যোগ")}</button>
+          <button className="btn-primary" onClick={() => save({ paymentMethods: s.paymentMethods || [] })}>{x("পেমেন্ট মাধ্যম সংরক্ষণ")}</button></div></section>
+
       <section className="card space-y-3"><h2 className="font-bold">{x("প্রারম্ভিক জের (হিসাব শুরুর দিনের ব্যালেন্স)")}</h2>
-        <div className="grid gap-3 sm:grid-cols-4">{Object.keys(methodLabel).map((k) => <div key={k}><label className="label">{x(methodLabel[k])}</label><input type="number" step="0.01" className="input" value={s.openingBalances?.[k] ?? 0} onChange={(e) => setS({ ...s, openingBalances: { ...s.openingBalances, [k]: e.target.value } })} /></div>)}</div>
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">{Object.keys(methodLabel).map((k) => <div key={k}><label className="label">{x(methodLabel[k])}</label><input type="number" step="0.01" className="input" value={s.openingBalances?.[k] ?? 0} onChange={(e) => setS({ ...s, openingBalances: { ...s.openingBalances, [k]: e.target.value } })} /></div>)}</div>
         <button className="btn-primary" onClick={() => save({ openingBalances: s.openingBalances })}>{x("সংরক্ষণ")}</button></section>
 
       <section className="card space-y-3"><h2 className="font-bold">{x("শিক্ষকের অ্যাক্সেস")}</h2><label className="flex items-center gap-3"><input type="checkbox" checked={s.restrictTeachers !== false} onChange={(e) => setS({ ...s, restrictTeachers: e.target.checked })} /> {x("শিক্ষক শুধু নিজের নিয়োগকৃত শ্রেণি/বিষয়ে কাজ করতে পারবেন (প্রস্তাবিত)")}</label><button className="btn-primary" onClick={() => save({ restrictTeachers: s.restrictTeachers !== false })}>{x("সংরক্ষণ")}</button></section>

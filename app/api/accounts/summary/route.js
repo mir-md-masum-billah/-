@@ -1,12 +1,12 @@
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/guard";
-import { LedgerEntry, Invoice } from "@/lib/models";
+import { LedgerEntry, Invoice, PAY_METHODS } from "@/lib/models";
 import { handle, json, bad } from "@/lib/http";
 import { isDate, ymDhaka, todayDhaka, lastMonths } from "@/lib/dates";
 import { getSettings } from "@/lib/settings";
 import { round2 } from "@/lib/finance";
 
-const ACC = ["cash", "bkash", "nagad", "bank"];
+const ACC = PAY_METHODS;
 export const GET = handle(async (req) => {
   await requireUser("accounts.read");
   await connectDB();

@@ -5,6 +5,7 @@ import { handle, json, ok, bad, num, isId, HttpError } from "@/lib/http";
 import { netPaidMap, obligation, lockInvoice, nextNo, round2 } from "@/lib/finance";
 import { isDate, isFuture, todayDhaka } from "@/lib/dates";
 import { audit } from "@/lib/audit";
+import { ensureAdmitCard } from "@/lib/pay";
 
 export const GET = handle(async (req) => {
   await requireUser("fees.read");
@@ -14,6 +15,7 @@ export const GET = handle(async (req) => {
   for (const k of ["student", "invoice"]) if (sp.get(k) && isId(sp.get(k))) f[k] = sp.get(k);
   if (PAY_METHODS.includes(sp.get("method"))) f.method = sp.get("method");
   if (["payment", "refund"].includes(sp.get("type"))) f.type = sp.get("type");
+  if (["online", "office"].includes(sp.get("channel"))) f.channel = sp.get("channel") === "office" ? { $ne: "online" } : "online";
   if (sp.get("voided") !== "true") f.voided = { $ne: true };
   const from = sp.get("from"), to = sp.get("to");
   if (isDate(from) || isDate(to)) f.date = { ...(isDate(from) && { $gte: from }), ...(isDate(to) && { $lte: to }) };
@@ -43,9 +45,10 @@ export const POST = handle(async (req) => {
     if (type === "payment" && amount > due + 0.001) throw bad(`বকেয়া মাত্র ${due} টাকা — এর বেশি নেওয়া যাবে না`);
     if (type === "refund" && amount > net + 0.001) throw bad(`ফেরতযোগ্য জমা মাত্র ${net} টাকা`);
     const receiptNo = await nextNo(type === "refund" ? "RF" : "R", session);
-    const [pay] = await Payment.create([{ receiptNo, type, invoice: inv._id, student: inv.student, amount, method: b.method, date, reference: b.reference, note: b.note, createdBy: user.id, createdByName: user.name }], { session });
+    const [pay] = await Payment.create([{ receiptNo, type, invoice: inv._id, student: inv.student, amount, method: b.method, date, reference: b.reference, note: b.note, channel: "office", createdBy: user.id, createdByName: user.name }], { session });
     await LedgerEntry.create([{ type: type === "refund" ? "expense" : "income", account: b.method, category: type === "refund" ? "refund" : "fee", title: `${type === "refund" ? "ফেরত" : "বেতন/ফি আদায়"} — ${inv.title} (${receiptNo})`, amount, date, reference: receiptNo, source: type, sourceKey: `payment:${pay._id}`, createdByName: user.name }], { session });
     await audit(user, type, "payment", pay._id, { receiptNo, amount, invoice: inv.invoiceNo, method: b.method }, session);
+    if (type === "payment" && inv.examNotice && round2(due - amount) <= 0.001) await ensureAdmitCard(session, inv);
     return { id: pay._id, receiptNo, due: round2(due - (type === "payment" ? amount : -amount)) };
   });
   return ok(out);

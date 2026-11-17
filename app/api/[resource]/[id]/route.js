@@ -14,8 +14,11 @@ async function load(params) {
   await connectDB();
   const existing = await c.model.findById(id).select(c.hash ? "+password" : "");
   if (!existing) throw new HttpError(404, "রেকর্ড পাওয়া যায়নি"); // আগে "সফল" দেখাত — এখন ঠিকমতো 404
+  // শিক্ষকের জন্য নিয়োগকৃত শ্রেণির বাইরের রেকর্ড পরিবর্তন নয় (admin/headmaster ইত্যাদির সীমা নেই)
+  if (c.scope) { const sc = await c.scope(user); if (Object.keys(sc).length && !(await c.model.exists({ $and: [{ _id: id }, sc] }))) throw new HttpError(403, "এই রেকর্ড পরিবর্তনের অনুমতি নেই"); }
   return { c, resource, user, existing };
 }
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const snapshot = (doc) => { const o = doc.toObject(); delete o.password; delete o.history; return o; };
 
 export const PUT = handle(async (req, { params }) => {
@@ -35,7 +38,11 @@ export const PUT = handle(async (req, { params }) => {
   existing.set(data);
   await existing.save();
   await c.afterUpdate?.(beforeDoc, existing, { user });
-  await audit(user, "update", resource, existing._id, { before, changed: Object.keys(data).filter((k) => k !== "password") });
+  const after = snapshot(existing);
+  const changed = Object.keys(data).filter((k) => k !== "password");
+  const diff = Object.fromEntries(changed.filter((k) => !same(before[k], after[k])).map((k) => [k, [before[k] ?? null, after[k] ?? null]]));
+  if (data.password) diff.password = ["••••", "••••"];
+  await audit(user, "update", resource, existing._id, { before, changed, diff, name: after.name || after.title || after.userId });
   return ok();
 });
 

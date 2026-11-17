@@ -8,6 +8,7 @@ import { getDashboardHref } from "@/lib/session";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import Icon from "@/components/Icon";
+import ExamNoticeBoard from "@/components/ExamNoticeBoard";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +127,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <ExamNoticeBoard />
 
       {/* ───── ডিজিটাল ক্যাম্পাস (আইটি সুবিধা) ───── */}
       <section id="digital" className="lattice hero-glow scroll-mt-16 text-white">

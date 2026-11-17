@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/guard";
-import { Settings, Student } from "@/lib/models";
+import { Settings, Student, PAY_METHODS } from "@/lib/models";
+import crypto from "crypto";
 import { handle, json, ok, bad, num } from "@/lib/http";
 import { getSettings, bustSettings } from "@/lib/settings";
 import { PERMISSIONS, DEFAULT_PERMS, ROLES, resolvePerms } from "@/lib/rbac";
@@ -9,8 +10,8 @@ import { audit } from "@/lib/audit";
 export const GET = handle(async () => {
   const u = await requireUser();
   const s = await getSettings();
-  const out = { schoolName: s.schoolName, logo: s.logo, address: s.address, phone: s.phone, email: s.email, about: s.about, tagline: s.tagline, currentSession: s.currentSession, classes: s.classes };
-  if (u.perms.includes("settings.manage")) Object.assign(out, { openingBalances: s.openingBalances, rolePermissions: Object.fromEntries(ROLES.filter((r) => !["student", "parent", "superadmin"].includes(r)).map((r) => [r, resolvePerms(r, s.rolePermissions, s.permsKnown)])), permissionList: PERMISSIONS, restrictTeachers: s.restrictTeachers !== false });
+  const out = { schoolName: s.schoolName, schoolNameEn: s.schoolNameEn, taglineEn: s.taglineEn, logo: s.logo, address: s.address, phone: s.phone, email: s.email, about: s.about, tagline: s.tagline, currentSession: s.currentSession, classes: s.classes };
+  if (u.perms.includes("settings.manage")) Object.assign(out, { paymentMethods: s.paymentMethods || [], openingBalances: s.openingBalances, rolePermissions: Object.fromEntries(ROLES.filter((r) => !["student", "parent", "superadmin"].includes(r)).map((r) => [r, resolvePerms(r, s.rolePermissions, s.permsKnown)])), permissionList: PERMISSIONS, restrictTeachers: s.restrictTeachers !== false });
   return json(out);
 });
 
@@ -19,7 +20,7 @@ export const PUT = handle(async (req) => {
   await connectDB();
   const b = await req.json();
   const upd = {};
-  for (const k of ["schoolName", "address", "phone", "email", "about", "tagline", "currentSession"]) if (b[k] !== undefined) upd[k] = String(b[k]).trim().slice(0, 500);
+  for (const k of ["schoolName", "schoolNameEn", "taglineEn", "address", "phone", "email", "about", "tagline", "currentSession"]) if (b[k] !== undefined) upd[k] = String(b[k]).trim().slice(0, 500);
   if (b.logo !== undefined) { // খালি (সরানো), http(s)/সাইটের ঠিকানা, অথবা ব্রাউজারে ছোট করা ছবি (data URL)
     const v = String(b.logo).trim();
     if (v && !/^(https?:\/\/|\/)\S{1,500}$/.test(v) && !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v)) throw bad("লোগো সঠিক ছবি নয়");
@@ -36,7 +37,18 @@ export const PUT = handle(async (req) => {
     upd.classes = b.classes.map((c) => ({ name: String(c.name).trim(), sections: [...new Set((c.sections || []).map((x) => String(x).trim()).filter(Boolean))] }));
   }
   if (typeof b.restrictTeachers === "boolean") upd.restrictTeachers = b.restrictTeachers;
-  if (b.openingBalances) { upd.openingBalances = {}; for (const a of ["cash", "bkash", "nagad", "bank"]) upd.openingBalances[a] = num(b.openingBalances[a], "প্রারম্ভিক জের", { req: false, min: -1e9 }) ?? 0; }
+  if (b.openingBalances) { upd.openingBalances = {}; for (const a of PAY_METHODS) upd.openingBalances[a] = num(b.openingBalances[a], "প্রারম্ভিক জের", { req: false, min: -1e9 }) ?? 0; }
+  if (b.paymentMethods !== undefined) {
+    if (!Array.isArray(b.paymentMethods) || b.paymentMethods.length > 20) throw bad("পেমেন্ট মাধ্যমের তালিকা সঠিক নয়");
+    upd.paymentMethods = b.paymentMethods.map((m) => {
+      const kind = String(m.kind || "");
+      if (!["bkash", "nagad", "rocket", "bank", "other"].includes(kind)) throw bad("পেমেন্ট মাধ্যমের ধরন সঠিক নয়");
+      const label = String(m.label || "").trim().slice(0, 60), accountNumber = String(m.accountNumber || "").trim().slice(0, 60);
+      if (!label) throw bad("প্রতিটি পেমেন্ট মাধ্যমের নাম দিন");
+      if (!accountNumber) throw bad(`"${label}" — অ্যাকাউন্ট নম্বর দিন`);
+      return { id: /^[a-f0-9]{12}$/.test(m.id || "") ? m.id : crypto.randomBytes(6).toString("hex"), kind, label, accountNumber, accountType: String(m.accountType || "").trim().slice(0, 40), accountName: String(m.accountName || "").trim().slice(0, 80), instructions: String(m.instructions || "").trim().slice(0, 400), active: m.active !== false && m.active !== "false" };
+    });
+  }
   if (b.rolePermissions) {
     const rp = {};
     for (const [role, list] of Object.entries(b.rolePermissions)) {

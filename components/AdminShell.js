@@ -20,8 +20,12 @@ const nav = [
   { href: "/admin/attendance/report", label: "হাজিরা রিপোর্ট", icon: "trend", perm: "attendance.read" },
   { href: "/admin/staff-attendance", label: "স্টাফ হাজিরা", icon: "clock", perm: "staffattendance.read" },
   { href: "/admin/leave", label: "ছুটি", icon: "calendar" },
+  { href: "/admin/routine", label: "ক্লাস রুটিন", icon: "clock", perm: "routine.manage" },
+  { href: "/admin/my-routine", label: "আমার রুটিন", icon: "calendar", role: "teacher" },
+  { href: "/admin/exams", label: "পরীক্ষার নোটিশ", icon: "clipboard", perm: "exams.manage" },
   { href: "/admin/results", label: "পরীক্ষার ফলাফল", icon: "file", perm: "results.read" },
   { href: "/admin/fees", label: "বেতন ও ফি", icon: "wallet", perm: "fees.read" },
+  { href: "/admin/pay-requests", label: "অনলাইন পেমেন্ট যাচাই", icon: "inbox", perm: "payments.review" },
   { href: "/admin/accounts", label: "হিসাব নিকাশ", icon: "bars", perm: "accounts.read" },
   { href: "/admin/notices", label: "নোটিশ", icon: "megaphone", perm: "notices.write" },
   { href: "/admin/staff", label: "শিক্ষক ও স্টাফ", icon: "users", perm: "staff.read" },
@@ -33,7 +37,7 @@ export default function AdminShell({ session, schoolName, children }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const items = nav.filter((n) => !n.perm || session.perms.includes(n.perm));
+  const items = nav.filter((n) => (!n.perm || session.perms.includes(n.perm)) && (!n.role || session.role === n.role));
   return (
     <div className="min-h-screen lg:flex print:block">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/25 bg-night px-4 py-3 text-white lg:hidden print:hidden">

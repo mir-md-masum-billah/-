@@ -1,0 +1,33 @@
+import { connectDB } from "@/lib/db";
+import { currentUser, requireUser } from "@/lib/guard";
+import { RoutineSlot } from "@/lib/models";
+import { handle, json, ok, HttpError, isId } from "@/lib/http";
+import { validateSlot } from "@/lib/routine";
+import { audit } from "@/lib/audit";
+
+// অ্যাডমিন (routine.manage) সব দেখে; শিক্ষক শুধু নিজের রুটিন
+export const GET = handle(async (req) => {
+  const u = await currentUser();
+  if (!u) throw new HttpError(401, "আবার লগইন করুন");
+  if (u.role === "student") throw new HttpError(403, "অনুমতি নেই");
+  await connectDB();
+  const sp = new URL(req.url).searchParams;
+  const f = {};
+  if (u.perms.includes("routine.manage")) {
+    if (isId(sp.get("teacher") || "")) f.teacher = sp.get("teacher");
+    if (sp.get("class")) f.class = sp.get("class");
+    if (sp.get("section")) f.section = sp.get("section");
+  } else if (u.role === "teacher") f.teacher = u.id;
+  else throw new HttpError(403, "অনুমতি নেই");
+  const items = await RoutineSlot.find(f).sort({ day: 1, startTime: 1 }).populate("teacher", "name userId").lean();
+  return json({ items });
+});
+
+export const POST = handle(async (req) => {
+  const user = await requireUser("routine.manage");
+  await connectDB();
+  const d = await validateSlot(await req.json());
+  const doc = await RoutineSlot.create(d);
+  await audit(user, "create", "routine", doc._id, { class: d.class, section: d.section, subject: d.subject, day: d.day, time: `${d.startTime}-${d.endTime}`, teacher: String(d.teacher) });
+  return ok({ id: doc._id });
+});

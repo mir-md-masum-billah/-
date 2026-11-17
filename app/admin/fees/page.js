@@ -20,20 +20,20 @@ export default function Fees() {
   const [f, setF] = useState({ class: "", month: "", year: String(yearDhaka()), outstanding: true, q: "" }); const [dq, setDq] = useState("");
   const [loading, setLoading] = useState(true); const [err, setErr] = useState(""); const [toast, setToast] = useState("");
   const [modal, setModal] = useState(null); const [form, setForm] = useState({}); const [mErr, setMErr] = useState(""); const [busy, setBusy] = useState(false);
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState([]); const [chan, setChan] = useState(""); const [cashInv, setCashInv] = useState([]);
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
 
   useEffect(() => { const t = setTimeout(() => setDq(f.q), 350); return () => clearTimeout(t); }, [f.q]);
-  useEffect(() => { setPage(1); }, [f.class, f.month, f.year, f.outstanding, dq, tab]);
+  useEffect(() => { setPage(1); }, [f.class, f.month, f.year, f.outstanding, dq, tab, chan]);
   const load = useCallback(async () => {
     setLoading(true); setErr("");
     const url = tab === "inv"
       ? `/api/invoices?page=${page}&limit=20&q=${encodeURIComponent(dq)}${f.class ? "&class=" + encodeURIComponent(f.class) : ""}${f.month ? "&month=" + f.month : ""}${f.year ? "&year=" + f.year : ""}${f.outstanding ? "&outstanding=true" : ""}`
-      : `/api/payments?page=${page}&limit=20`;
+      : `/api/payments?page=${page}&limit=20${chan ? "&channel=" + chan : ""}`;
     const r = await api("GET", url);
     if (r.ok) setD(r.d); else setErr(r.d.error || x("লোড করা যায়নি"));
     setLoading(false);
-  }, [tab, page, dq, f.class, f.month, f.year, f.outstanding]);
+  }, [tab, page, dq, f.class, f.month, f.year, f.outstanding, chan]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api("GET", "/api/students?limit=1000&active=true").then((r) => r.ok && setStudents(r.d.items)); }, []);
 
@@ -52,6 +52,7 @@ export default function Fees() {
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-3xl text-brand-dark">{x("বেতন ও ফি")}</h1>
+        {can("fees.collect") && <button className="btn-gold" onClick={() => open("cash", { student: "", invoice: "", category: "tuition", period: todayDhaka().slice(0, 7), amount: "", date: todayDhaka() })}>{x("ক্যাশ পেমেন্ট")}</button>}
         {can("fees.manage") && <><button className="btn-ghost" onClick={() => open("gen", { month: monthDhaka(), year: yearDhaka(), class: "" })}>{x("মাসিক ফি তৈরি")}</button><button className="btn-primary" onClick={() => open("new", { category: "tuition", period: todayDhaka().slice(0, 7) })}>{x("+ ইনভয়েস")}</button></>}
       </div>
       <div className="mb-4 flex gap-2 border-b">{[["inv", x("ইনভয়েস ও বকেয়া")], ["pay", x("পেমেন্ট ইতিহাস")]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`px-4 py-2 font-semibold ${tab === k ? "border-b-4 border-gold text-brand" : "text-slate-600"}`}>{l}</button>)}</div>
@@ -66,6 +67,7 @@ export default function Fees() {
         </div>
         {d.totals && <p className="mb-3 text-sm text-slate-700">{x("ফিল্টারে মোট ধার্য")} <b>{money(d.totals.obligation)}</b> · {x("জমা")} <b className="text-brand">{money(d.totals.paid)}</b> · {x("বকেয়া")} <b className="text-red-600">{money(d.totals.due)}</b></p>}
       </>}
+      {tab === "pay" && <div className="mb-3 flex items-center gap-2 text-sm"><label className="font-semibold">{x("পেমেন্টের ধরন")}</label><select className="input !w-auto" value={chan} onChange={(e) => setChan(e.target.value)}><option value="">{x("সব")}</option><option value="online">{x("অনলাইন (অনুমোদিত)")}</option><option value="office">{x("ক্যাশ/অফিস")}</option></select></div>}
       {err && <p className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err} <button className="underline" onClick={load}>{x("আবার চেষ্টা")}</button></p>}
 
       <div className={`card overflow-x-auto !p-0 ${loading ? "opacity-60" : ""}`}>
@@ -89,7 +91,7 @@ export default function Fees() {
           <table className="w-full min-w-[760px]"><thead><tr>{[x("রসিদ"), x("তারিখ"), x("শিক্ষার্থী"), x("বিবরণ"), x("পদ্ধতি"), x("টাকা"), ""].map((h, hi) => <th key={hi} className="th">{h}</th>)}</tr></thead>
             <tbody>{d.items.map((p) => (
               <tr key={p._id}><td className="td whitespace-nowrap">{p.receiptNo}</td><td className="td">{date(p.date)}</td><td className="td">{p.student?.name}</td><td className="td">{p.invoice?.title && x(p.invoice.title)}{p.type === "refund" && <span className="ml-1 rounded bg-amber-100 px-1.5 text-xs text-amber-800">{x("রিফান্ড")}</span>}</td>
-                <td className="td">{x(methodLabel[p.method])}</td><td className={`td font-bold ${p.type === "refund" ? "text-red-600" : "text-brand"}`}>{p.type === "refund" ? "−" : ""}{money(p.amount)}</td>
+                <td className="td">{p.methodLabel || x(methodLabel[p.method])}<span className={`ml-1 rounded px-1.5 text-xs ${p.channel === "online" ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"}`}>{p.channel === "online" ? x("অনলাইন") : x("ক্যাশ/অফিস")}</span>{p.trxId && <span className="block text-xs text-slate-500">{p.trxId}</span>}</td><td className={`td font-bold ${p.type === "refund" ? "text-red-600" : "text-brand"}`}>{p.type === "refund" ? "−" : ""}{money(p.amount)}</td>
                 <td className="td whitespace-nowrap text-right"><a className="mr-3 font-semibold text-brand" href={`/admin/receipt/${p._id}`} target="_blank">{x("রসিদ")}</a>{can("fees.manage") && <button className="font-semibold text-red-600" onClick={() => ask(x("এই লেনদেন বাতিলের কারণ:"), "POST", `/api/payments/${p._id}/void`, x("লেনদেন বাতিল হয়েছে"))}>{x("বাতিল")}</button>}</td></tr>))}
               {!loading && d.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={7}>{x("কোনো পেমেন্ট নেই")}</td></tr>}</tbody></table>
         )}
@@ -103,6 +105,16 @@ export default function Fees() {
         <F l={x("তারিখ")}><input type="date" required max={todayDhaka()} className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></F>
         <F l={x("ট্রানজেকশন আইডি/রেফারেন্স")}><input className="input" onChange={(e) => setForm({ ...form, reference: e.target.value })} /></F>
         {mErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mErr}</p>}<button className="btn-primary w-full" disabled={busy}>{busy ? x("অপেক্ষা করুন...") : x("পেমেন্ট নিশ্চিত করুন")}</button></form></Modal>}
+
+      {modal === "cash" && <Modal title={x("ক্যাশ পেমেন্ট গ্রহণ")} onClose={() => setModal(null)}><form className="space-y-3" onSubmit={(e) => submit(e, "POST", "/api/payments/cash", { student: form.student, invoice: form.invoice || undefined, category: form.category, period: form.category === "tuition" ? form.period : "", amount: form.amount, date: form.date, note: form.note }, (d) => x("✅ ইনভয়েস {0}", d.receiptNo), (d) => window.open(`/admin/receipt/${d.id}`, "_blank"))}>
+        <p className="rounded-lg bg-brand-light p-3 text-sm">{x("শিক্ষার্থী সরাসরি টাকা দিলে এখানে লিখুন — সাথে সাথে ইনভয়েস তৈরি হবে। এই পেমেন্ট \"ক্যাশ/অফিস\" হিসেবে আলাদা চিহ্নিত থাকবে।")}</p>
+        <F l={x("শিক্ষার্থী")}><select required className="input" value={form.student} onChange={async (e) => { const v = e.target.value; setForm({ ...form, student: v, invoice: "" }); setCashInv([]); if (v) { const r = await api("GET", `/api/invoices?student=${v}&outstanding=true&limit=100`); if (r.ok) setCashInv(r.d.items); } }}><option value="">{x("— বাছাই করুন —")}</option>{students.map((s) => <option key={s._id} value={s._id}>{s.name} ({x(s.class)}-{n(s.roll)}) · {s.studentId}</option>)}</select></F>
+        <F l={x("কোন ফি")}><select className="input" value={form.invoice} onChange={(e) => { const inv = cashInv.find((i) => i._id === e.target.value); setForm({ ...form, invoice: e.target.value, amount: inv ? inv.due : form.amount }); }}><option value="">{x("নতুন ফি (নিচের ধরন অনুযায়ী)")}</option>{cashInv.map((i) => <option key={i._id} value={i._id}>{x(i.title)} — {x("বকেয়া {0}", money(i.due))}</option>)}</select></F>
+        {!form.invoice && <><F l={x("পেমেন্টের ধরন")}><select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{Object.entries(feeCats).filter(([k]) => k !== "fine").map(([k, v]) => <option key={k} value={k}>{x(v)}</option>)}</select></F>
+          {form.category === "tuition" && <F l={x("মাস")}><input type="month" required className="input" value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} /></F>}</>}
+        <F l={x("টাকার পরিমাণ")}><input type="number" step="0.01" min="0.01" required className="input" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></F>
+        <F l={x("তারিখ")}><input type="date" required max={todayDhaka()} className="input" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></F>
+        {mErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mErr}</p>}<button className="btn-primary w-full" disabled={busy}>{busy ? x("অপেক্ষা করুন...") : x("পেমেন্ট সংরক্ষণ ও ইনভয়েস তৈরি")}</button></form></Modal>}
 
       {modal === "refund" && <Modal title={x("রিফান্ড")} onClose={() => setModal(null)}><form className="space-y-3" onSubmit={(e) => submit(e, "POST", "/api/payments", { type: "refund", invoice: form.invoice, amount: form.amount, method: form.method, date: form.date, note: form.note }, (d) => x("✅ রিফান্ড {0}", d.receiptNo))}>
         <p className="font-semibold">{form.label}</p><p className="text-sm text-slate-600">{x("ফেরতযোগ্য: {0}", money(form.max))}</p>

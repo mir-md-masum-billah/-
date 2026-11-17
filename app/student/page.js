@@ -11,6 +11,9 @@ import { useLang } from "@/components/LangProvider";
 import { school } from "@/lib/school";
 import { schoolEn, num, moneyL, dateL, monthName } from "@/lib/translations";
 import { confirmBox } from "@/components/Dialog";
+import StudentPay from "@/components/StudentPay";
+import StudentExams from "@/components/StudentExams";
+import RoutineSheet from "@/components/RoutineSheet";
 
 const Title = ({ children }) => <h2 className="border-b border-gold/40 px-4 pb-2 pt-4 font-display text-xl text-brand-dark">{children}</h2>;
 
@@ -18,13 +21,14 @@ export default function StudentPortal() {
   const { lang, t: all } = useLang(); const t = all.student;
   const bn = (n) => num(n, lang), money = (n) => moneyL(n, lang), bnDate = (s) => dateL(s, lang), mo = (i) => monthName(i, lang);
   const label = t.status, methodLabel = t.methods;
-  const tabs = Object.entries(t.tabs);
+  const { x } = useLang(); const tabs = [...Object.entries(t.tabs), ["exam", x("পরীক্ষা")], ["rt", x("ক্লাস রুটিন")]];
+  const [preInv, setPreInv] = useState(null); const [routine, setRoutine] = useState(null); const [rk, setRk] = useState(0);
   const schoolName = lang === "en" ? schoolEn.name : school.name;
   const [leaves, setLeaves] = useState(null); const [lf, setLf] = useState({}); const [lErr, setLErr] = useState(""); const [lBusy, setLBusy] = useState(false); const [d, setD] = useState(null); const [err, setErr] = useState(""); const [tab, setTab] = useState("home");
   const load = () => { setErr(""); fetch("/api/student/me").then(async (r) => { if (r.status === 401) { location.href = "/login"; return; } const j = await r.json(); r.ok ? setD(j) : setErr(j.error || t.errLoad); }).catch(() => setErr(t.errNet)); };
   useEffect(load, []);
   const loadLeaves = () => fetch("/api/leaves?limit=50").then((r) => r.json()).then((j) => setLeaves(j.items || [])).catch(() => setLeaves([]));
-  useEffect(() => { if (tab === "lv") loadLeaves(); }, [tab]);
+  useEffect(() => { if (tab === "lv") loadLeaves(); if (tab === "rt" && !routine) fetch("/api/student/routine").then((r) => r.json()).then(setRoutine).catch(() => setRoutine({ items: [] })); }, [tab]);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date());
   async function applyLeave(e) { e.preventDefault(); setLBusy(true); setLErr(""); const r = await fetch("/api/leaves", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from: lf.from || today, to: lf.to || lf.from || today, reason: lf.reason }) }); const j = await r.json(); setLBusy(false); if (!r.ok) return setLErr(j.error || t.errGeneric); setLf({}); e.target.reset(); loadLeaves(); }
   async function cancelLeave(id) { if (!(await confirmBox(t.confirmCancel, { danger: true }))) return; const r = await fetch("/api/leaves/" + id, { method: "DELETE" }); if (r.ok) loadLeaves(); }
@@ -42,15 +46,15 @@ export default function StudentPortal() {
   const groups = {}; results.forEach((r) => { (groups[`${r.exam} — ${r.year}`] ||= []).push(r); });
 
   return (
-    <div className="min-h-screen bg-pearl">
-      <header className="lattice hero-glow text-white">
+    <div className="min-h-screen bg-pearl print:bg-white">
+      <header className="lattice hero-glow text-white print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-2.5 font-display text-lg"><Crest className="h-8 w-auto text-gold-soft" />{schoolName}</Link>
           <span className="flex items-center gap-2"><LanguageSwitch /><ThemeToggle /><LogoutButton className="btn border border-white/25 !px-3 !py-1.5 text-sm text-white hover:border-gold-soft hover:bg-white/10" /></span>
         </div>
       </header>
-      <nav className="sticky top-0 z-10 border-b border-gold/30 bg-white/95 backdrop-blur" aria-label={t.portalMenu}><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`whitespace-nowrap border-b-[3px] px-4 py-3.5 font-semibold transition ${tab === k ? "border-gold text-brand-dark" : "border-transparent text-slate-500 hover:text-brand"}`}>{l}</button>)}</div></nav>
-      <main className="mx-auto max-w-4xl space-y-5 p-4 sm:py-8">
+      <nav className="sticky top-0 z-10 border-b border-gold/30 bg-white/95 backdrop-blur print:hidden" aria-label={t.portalMenu}><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`whitespace-nowrap border-b-[3px] px-4 py-3.5 font-semibold transition ${tab === k ? "border-gold text-brand-dark" : "border-transparent text-slate-500 hover:text-brand"}`}>{l}</button>)}</div></nav>
+      <main className="mx-auto max-w-4xl space-y-5 p-4 sm:py-8 print:max-w-none print:space-y-0 print:p-0">
         {tab === "home" && <>
           <div className="lattice flex items-center gap-5 overflow-hidden rounded-2xl bg-night p-5 text-white shadow-gilt sm:gap-7 sm:p-7">
             <div className="shrink-0 rounded-t-full border border-gold-soft/70 p-1">
@@ -80,6 +84,7 @@ export default function StudentPortal() {
 
         {tab === "fee" && <>
           <div className="grid grid-cols-2 gap-3"><div className="card"><p className="text-sm text-slate-600">{t.paid}</p><p className="font-display text-3xl text-brand-dark">{money(totalPaid)}</p></div><div className="card"><p className="text-sm text-slate-600">{t.totalDue}</p><p className={`font-display text-3xl ${totalDue > 0 ? "text-red-600" : "text-brand-dark"}`}>{money(totalDue)}</p></div></div>
+          <StudentPay student={s} invoices={invoices} preInvoice={preInv} onDone={() => { load(); setRk((v) => v + 1); }} />
           <div className="card overflow-x-auto !p-0"><Title>{t.feeTitle}</Title><table className="w-full min-w-[480px]"><thead><tr>{t.feeCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
             <tbody>{invoices.map((i) => <tr key={i._id}><td className="td">{i.title}{i.period && ` — ${mo(i.month - 1)} ${i.year}`}</td><td className="td">{money(i.obligation)}</td><td className="td">{money(i.paid)}</td><td className={`td font-bold ${i.due > 0 ? "text-red-600" : "text-brand"}`}>{i.due > 0 ? money(i.due) : t.settled}</td></tr>)}
               {invoices.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noFees}</td></tr>}</tbody></table></div>
@@ -87,6 +92,9 @@ export default function StudentPortal() {
             <tbody>{payments.map((p) => <tr key={p._id}><td className="td">{p.date}</td><td className="td"><a className="font-semibold text-brand underline decoration-gold underline-offset-4" href={`/student/receipt/${p._id}`} target="_blank">{p.receiptNo}</a></td><td className="td">{p.invoice?.title}{p.type === "refund" && ` (${t.refund})`}</td><td className="td">{methodLabel[p.method]}</td><td className="td font-semibold">{p.type === "refund" ? "−" : ""}{money(p.amount)}</td></tr>)}
               {payments.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={5}>{t.noPay}</td></tr>}</tbody></table></div>
         </>}
+
+        {tab === "exam" && <StudentExams refreshKey={rk} onPay={(id) => { setPreInv(id); setTab("fee"); }} />}
+        {tab === "rt" && (routine ? <RoutineSheet items={routine.items} mode="student" heading={`${routine.class}${routine.section ? ` (${routine.section})` : ""} — ${s.name}`} filename={`routine-${s.studentId}`} /> : <Loader compact label={t.loading} />)}
 
         {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">{t.noResults}</p>}
           {Object.entries(groups).map(([name, rows]) => { const got = rows.reduce((t, r) => t + r.marks, 0), full = rows.reduce((t, r) => t + r.full, 0); return (

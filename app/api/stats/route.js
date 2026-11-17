@@ -46,7 +46,7 @@ export const GET = handle(async () => {
     const { getSettings } = await import("@/lib/settings");
     const st = await getSettings();
     const acct = (a) => round2((st.openingBalances?.[a] || 0) + (bal.find((r) => r._id.a === a && r._id.t === "income")?.n || 0) - (bal.find((r) => r._id.a === a && r._id.t === "expense")?.n || 0));
-    Object.assign(out, { monthIncome: round2(g(m, "income")), monthExpense: round2(g(m, "expense")), feeCollected: round2(g(fee, "fee") - g(fee, "refund")), cashBalance: acct("cash"), bankBalance: acct("bank"), mobileBalance: round2(acct("bkash") + acct("nagad")), salaryExpense: round2(salary[0]?.n || 0), recent });
+    Object.assign(out, { monthIncome: round2(g(m, "income")), monthExpense: round2(g(m, "expense")), feeCollected: round2(g(fee, "fee") - g(fee, "refund")), cashBalance: acct("cash"), bankBalance: acct("bank"), mobileBalance: round2(acct("bkash") + acct("nagad") + acct("rocket")), salaryExpense: round2(salary[0]?.n || 0), recent });
   })());
   tasks.push((async () => { out.notices = await Notice.find().sort({ date: -1, createdAt: -1 }).limit(4).select("title date").lean(); })());
   await Promise.all(tasks);

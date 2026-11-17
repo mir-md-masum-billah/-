@@ -1,44 +1,68 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "./CrudPage";
-import Crest from "./Crest";
-import Icon from "./Icon";
+import A4Doc, { Field } from "./A4Doc";
 import { methodLabel } from "@/lib/school";
 import { useLang } from "@/components/LangProvider";
 import Loader from "@/components/Loader";
-import { realOnly } from "@/lib/school";
 
-// অ্যাডমিন ও শিক্ষার্থী — দুই জায়গার রসিদই এই একটি কম্পোনেন্ট থেকে আসে
+const Stamp = ({ text, color }) => <div style={{ position: "absolute", right: "14mm", top: "112mm", transform: "rotate(-14deg)", border: `3px solid ${color}`, color, padding: "2px 18px", fontSize: 26, fontWeight: 800, opacity: 0.75, borderRadius: 6 }}>{text}</div>;
+
+// অ্যাডমিন, শিক্ষক ও শিক্ষার্থী — সবার ইনভয়েস/রসিদ এই একটি কম্পোনেন্ট থেকে আসে (সার্ভার অনুমতি যাচাই করে)
 export default function ReceiptView({ id }) {
   const { x, n, money, date } = useLang();
   const [d, setD] = useState(null); const [err, setErr] = useState("");
   useEffect(() => { api("GET", `/api/receipt/${id}`).then((r) => (r.ok ? setD(r.d) : setErr(r.d.error || x("রসিদ পাওয়া যায়নি")))); }, [id]);
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
   if (!d) return <Loader compact label={x("লোড হচ্ছে...")} />;
-  const { payment: p, invoice: i, student: s, school, balance } = d;
+  const { payment: p, invoice: i, student: s, balance } = d;
+  const refund = p.type === "refund", online = p.channel === "online";
+  const th = { textAlign: "left", background: "#E8F1EC", color: "#0A4435", padding: "6px 8px", fontSize: 11, borderBottom: "2px solid #C49B3F" };
+  const td = { padding: "7px 8px", borderBottom: "1px solid #e2e8f0" };
   return (
-    <div className="mx-auto max-w-2xl">
-      <button className="btn-primary mb-5 print:hidden" onClick={() => window.print()}><Icon name="print" className="h-4 w-4" /> {x("প্রিন্ট করুন")}</button>
-      <div className="rounded-xl border border-gold bg-white p-2 shadow-lux print:border-0 print:p-0 print:shadow-none">
-        <div className="rounded-lg border border-gold/50 p-6 sm:p-8 print:border-gold">
-          <div className="border-b border-gold/60 pb-5 text-center">
-            {school.logo ? <img src={school.logo} alt="" className="mx-auto mb-2 h-14" /> : <Crest className="mx-auto mb-2 h-12 w-auto text-gold-deep" />}
-            <h1 className="text-3xl text-brand-dark">{school.name}</h1>
-            <p className="mt-1 text-sm text-slate-600">{[realOnly(school.address), realOnly(school.phone)].filter(Boolean).join(" · ")}</p>
-            <p className="mt-3 inline-block rounded-sm border border-gold bg-gold-light px-4 py-0.5 font-semibold text-brand-dark">{p.type === "refund" ? x("রিফান্ড ভাউচার") : x("টাকা প্রাপ্তির রসিদ")}</p>
-          </div>
-          {p.voided && <p className="mt-4 flex items-center justify-center gap-2 rounded bg-red-100 p-2 text-center font-bold text-red-700"><Icon name="warn" className="h-5 w-5" /> {x("এই লেনদেন বাতিল — কারণ: {0}", p.voidReason)}</p>}
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm"><p>{x("রসিদ নং:")} <b>{p.receiptNo}</b></p><p className="text-right">{x("তারিখ:")} <b>{date(p.date)}</b></p>
-            <p>{x("শিক্ষার্থী")}: <b>{s.name}</b></p><p className="text-right">{x("আইডি")}: <b>{s.studentId}</b></p><p>{x("শ্রেণি:")} <b>{x(s.class)}{s.section ? ` (${s.section})` : ""}</b>, {x("রোল:")} <b>{n(s.roll)}</b></p><p className="text-right">{x("পদ্ধতি:")} <b>{x(methodLabel[p.method])}</b></p>
-            {p.reference && <p className="col-span-2">{x("রেফারেন্স:")} {p.reference}</p>}</div>
-          <table className="mt-5 w-full text-sm"><tbody>
-            <tr className="border-y border-gold/50"><td className="py-2.5">{x(i.title)}{i.period ? ` (${i.period})` : ""} — {x("ইনভয়েস {0}", i.invoiceNo)}</td><td className="py-2.5 text-right">{x("ধার্য {0}", money(balance.obligation))}</td></tr>
-            <tr className="border-b border-gold/50 font-bold"><td className="py-2.5">{p.type === "refund" ? x("ফেরত টাকা") : x("এই রসিদে জমা")}</td><td className="py-2.5 text-right font-display text-2xl font-normal text-brand-dark">{money(p.amount)}</td></tr>
-            <tr><td className="py-2.5">{x("মোট জমা (সব রসিদ মিলিয়ে)")}</td><td className="py-2.5 text-right">{money(balance.paid)}</td></tr>
-            <tr><td className="py-2.5">{x("বর্তমান বকেয়া")}</td><td className="py-2.5 text-right font-bold">{money(Math.max(0, balance.due))}</td></tr></tbody></table>
-          <div className="mt-16 flex justify-between gap-4 text-sm"><span className="border-t border-slate-500 px-4 pt-1 sm:px-6">{x("অভিভাবকের স্বাক্ষর")}</span><span className="border-t border-slate-500 px-4 pt-1 text-right sm:px-6">{x("আদায়কারীর স্বাক্ষর ({0})", p.createdByName)}</span></div>
-        </div>
+    <A4Doc title={refund ? "রিফান্ড ভাউচার" : "পেমেন্ট ইনভয়েস"} titleEn={refund ? "Refund Voucher" : "Payment Invoice"} filename={`invoice-${p.receiptNo}`} code={p.receiptNo}>
+      {p.voided && <Stamp text="বাতিল / VOID" color="#b91c1c" />}
+      {!p.voided && !refund && <Stamp text="PAID" color="#0A4435" />}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div><p style={{ fontSize: 10, color: "#64748b" }}>ইনভয়েস নং / Invoice No</p><p style={{ fontSize: 20, fontWeight: 700, color: "#0A4435", letterSpacing: ".04em" }}>{p.receiptNo}</p></div>
+        <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: "#64748b" }}>তারিখ / Date</p><p style={{ fontWeight: 700 }}>{date(p.date)}</p>
+          <span style={{ display: "inline-block", marginTop: 4, padding: "1px 10px", borderRadius: 99, fontSize: 10.5, fontWeight: 700, background: online ? "#DBEAFE" : "#FEF3C7", color: online ? "#1E40AF" : "#92400E" }}>{online ? "অনলাইন পেমেন্ট · Online" : "ক্যাশ/অফিস · Office"}</span></div>
       </div>
-    </div>
+      {p.voided && <p style={{ marginTop: 8, background: "#FEE2E2", color: "#991B1B", padding: "5px 10px", borderRadius: 4, fontWeight: 600 }}>{x("এই লেনদেন বাতিল — কারণ: {0}", p.voidReason)}</p>}
+      <section style={{ marginTop: 14 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: "#9A7623", marginBottom: 6 }}>শিক্ষার্থীর তথ্য · Student</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 22px" }}>
+          <Field l="নাম" en="Name">{s.name}</Field><Field l="আইডি" en="ID">{s.studentId}</Field>
+          <Field l="শ্রেণি" en="Class">{x(s.class)}{s.section ? ` (${s.section})` : ""}</Field><Field l="রোল" en="Roll">{n(s.roll)}</Field>
+          {s.fatherName && <Field l="পিতার নাম" en="Father" className="col-span-2">{s.fatherName}</Field>}
+        </div>
+      </section>
+      <section style={{ marginTop: 16 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: "#9A7623", marginBottom: 6 }}>পেমেন্টের বিবরণ · Payment details</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead><tr><th style={th}>খাত / Description</th><th style={{ ...th, textAlign: "right" }}>ধার্য / Billed</th><th style={{ ...th, textAlign: "right" }}>{refund ? "ফেরত / Refunded" : "জমা / Paid"}</th></tr></thead>
+          <tbody><tr><td style={td}>{x(i.title)}{i.period ? ` (${i.period})` : ""}<br /><span style={{ fontSize: 10, color: "#64748b" }}>ইনভয়েস রেফারেন্স: {i.invoiceNo}</span></td><td style={{ ...td, textAlign: "right" }}>{money(balance.obligation)}</td><td style={{ ...td, textAlign: "right", fontWeight: 800, fontSize: 16, color: "#0A4435" }}>{money(p.amount)}</td></tr></tbody>
+        </table>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <table style={{ minWidth: 250, fontSize: 12 }}><tbody>
+            <tr><td style={{ padding: "2px 10px" }}>মোট জমা (সব পেমেন্ট) · Total paid</td><td style={{ textAlign: "right", fontWeight: 600 }}>{money(balance.paid)}</td></tr>
+            <tr><td style={{ padding: "2px 10px" }}>বর্তমান বকেয়া · Balance due</td><td style={{ textAlign: "right", fontWeight: 700, color: balance.due > 0 ? "#b91c1c" : "#0A4435" }}>{money(Math.max(0, balance.due))}</td></tr>
+          </tbody></table>
+        </div>
+      </section>
+      <section style={{ marginTop: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 22px" }}>
+          <Field l="পেমেন্ট মাধ্যম" en="Method">{p.methodLabel || x(methodLabel[p.method])}</Field>
+          {online ? <Field l="ট্রানজেকশন আইডি" en="Transaction ID">{p.trxId}</Field> : <Field l="রেফারেন্স" en="Reference">{p.reference}</Field>}
+          {online && <><Field l="যে নম্বর থেকে পাঠানো" en="Sender">{p.senderNumber}</Field><Field l="যে নম্বরে পাঠানো" en="Receiver">{p.receiverNumber}</Field></>}
+          <Field l={online ? "যাচাইকারী" : "আদায়কারী"} en={online ? "Verified by" : "Received by"}>{p.createdByName}</Field>
+          {p.note && !online && <Field l="নোট" en="Note">{p.note}</Field>}
+        </div>
+      </section>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 70, fontSize: 11 }}>
+        <span style={{ borderTop: "1px solid #64748b", padding: "3px 22px" }}>অভিভাবকের স্বাক্ষর · Guardian</span>
+        <span style={{ borderTop: "1px solid #64748b", padding: "3px 22px" }}>কর্তৃপক্ষের স্বাক্ষর · Authorised</span>
+      </div>
+    </A4Doc>
   );
 }
