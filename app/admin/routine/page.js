@@ -19,7 +19,7 @@ export default function Routine() {
   const [items, setItems] = useState(null); const [err, setErr] = useState(""); const [toast, setToast] = useState("");
   const [modal, setModal] = useState(false); const [form, setForm] = useState({}); const [mErr, setMErr] = useState(""); const [busy, setBusy] = useState(false);
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2800); };
-  useEffect(() => { api("GET", "/api/staff?role=teacher&active=true&limit=500").then((r) => { if (r.ok) { setTeachers(r.d.items); setFT((v) => v || r.d.items[0]?._id || ""); } }); api("GET", "/api/subjects?limit=1000").then((r) => r.ok && setSubjects(r.d.items)); }, []);
+  useEffect(() => { api("GET", "/api/staff?role=teacher,headmaster,admin,superadmin&active=true&limit=500").then((r) => { if (r.ok) { setTeachers(r.d.items); setFT((v) => v || r.d.items[0]?._id || ""); } }); api("GET", "/api/subjects?limit=1000").then((r) => r.ok && setSubjects(r.d.items)); }, []);
   const q = view === "teacher" ? (fT ? `teacher=${fT}` : "") : (fC ? `class=${encodeURIComponent(fC)}${fS ? `&section=${encodeURIComponent(fS)}` : ""}` : "");
   const load = useCallback(async () => { if (!q) { setItems([]); return; } const r = await api("GET", `/api/routines?${q}`); r.ok ? (setItems(r.d.items), setErr("")) : setErr(r.d.error || x("লোড করা যায়নি")); }, [q]);
   useEffect(() => { load(); }, [load]);

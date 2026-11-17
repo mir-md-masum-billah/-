@@ -13,7 +13,7 @@ export const GET = handle(async () => {
     Attendance.find({ student: u.id }).sort({ date: -1 }).select("date status").lean(),
     Invoice.find({ student: u.id, status: "open" }).sort({ year: -1, month: -1, createdAt: -1 }).lean(),
     Payment.find({ student: u.id, voided: { $ne: true } }).sort({ date: -1, createdAt: -1 }).populate("invoice", "title period invoiceNo").lean(),
-    Result.find({ student: u.id }).sort({ year: -1, exam: 1 }).select("-history").lean(),
+    Result.find({ student: u.id, published: { $ne: false } }).sort({ year: -1, exam: 1 }).select("-history").lean(),
     Notice.find().sort({ date: -1, createdAt: -1 }).limit(20).lean(),
   ]);
   const map = await netPaidMap(invoices.map((i) => i._id));

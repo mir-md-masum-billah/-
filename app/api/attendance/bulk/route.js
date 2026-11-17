@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/guard";
 import { Attendance, Student, ATT_STATUS } from "@/lib/models";
-import { handle, ok, bad, isId } from "@/lib/http";
+import { handle, ok, bad, isId, str } from "@/lib/http";
 import { isDate, isFuture } from "@/lib/dates";
 import { getSettings } from "@/lib/settings";
 import { audit } from "@/lib/audit";
@@ -11,7 +11,8 @@ import { assertAttendanceAccess } from "@/lib/assign";
 export const POST = handle(async (req) => {
   const user = await requireUser("attendance.write");
   await connectDB();
-  const { date, class: cls, section, records } = await req.json();
+  const body = await req.json();
+  const { date, records } = body, cls = str(body.class, 60), section = str(body.section, 60);
   if (!isDate(date)) throw bad("তারিখ সঠিক নয়");
   if (isFuture(date)) throw bad("ভবিষ্যতের তারিখে হাজিরা নেওয়া যায় না");
   const st = await getSettings();

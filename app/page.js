@@ -9,20 +9,29 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import Icon from "@/components/Icon";
 import ExamNoticeBoard from "@/components/ExamNoticeBoard";
+import VideoStrip from "@/components/VideoStrip";
+import ContactStrip from "@/components/ContactStrip";
+import { getSettings } from "@/lib/settings";
+import { memo } from "@/lib/memo";
 
 export const dynamic = "force-dynamic";
 
 async function getData(lang) {
   const school = await getSite(lang);
   try {
-    await connectDB();
-    const [notices, students, teachers] = await Promise.all([
-      Notice.find().sort({ date: -1, createdAt: -1 }).limit(5).lean(),
-      Student.countDocuments({ active: true }),
-      User.countDocuments({ active: true, role: "teacher" }),
-    ]);
-    return { notices, students, teachers, school };
-  } catch { return { notices: [], students: null, teachers: null, school }; }
+    // হোমপেজ প্রতিটি দর্শকের জন্য ডেটাবেজ ঘাঁটত — এখন ৩০ সেকেন্ডের ক্যাশ (সার্ভার খরচ কমে)
+    const { notices, students, teachers } = await memo("home:data", 30000, async () => {
+      await connectDB();
+      const [notices, students, teachers] = await Promise.all([
+        Notice.find().sort({ date: -1, createdAt: -1 }).limit(5).lean(),
+        Student.countDocuments({ active: true, archived: { $ne: true } }),
+        User.countDocuments({ active: true, role: "teacher" }),
+      ]);
+      return { notices, students, teachers };
+    });
+    const st = await getSettings();
+    return { notices, students, teachers, school, videos: st.videos || [], contacts: st.contacts || [] };
+  } catch { return { notices: [], students: null, teachers: null, school, videos: [], contacts: [] }; }
 }
 
 const featureIcons = ["book", "clipboard", "monitor", "star"];
@@ -32,7 +41,7 @@ const isFresh = (d) => { const t = Date.parse(d); return !Number.isNaN(t) && Dat
 export default async function Home() {
   const lang = await getLang();
   const t = tr(lang);
-  const [{ notices, students, teachers, school }, dash] = await Promise.all([getData(lang), getDashboardHref()]);
+  const [{ notices, students, teachers, school, videos, contacts }, dash] = await Promise.all([getData(lang), getDashboardHref()]);
   // প্রতিষ্ঠার সাল এখনো না বসানো থাকলে ("…লিখুন") নকশায় দেখানো হয় না
   const showEst = school.established && !String(school.established).includes("লিখুন");
   const stats = [
@@ -102,6 +111,8 @@ export default async function Home() {
         </div>
       </section>
 
+      <VideoStrip videos={videos.map((v) => ({ title: v.title, url: v.url }))} />
+
       {/* ───── আমাদের সম্পর্কে ───── */}
       <section id="about" className="scroll-mt-16 bg-pearl">
         <div className="mx-auto grid max-w-6xl gap-10 px-5 py-20 lg:grid-cols-[5fr_7fr] lg:gap-20">
@@ -170,6 +181,8 @@ export default async function Home() {
           </ul>
         </div>
       </section>
+
+      <ContactStrip contacts={contacts.map((c) => ({ name: c.name, role: c.role, phone: c.phone }))} title={lang === "en" ? "Contact numbers" : "যোগাযোগের ফোন নম্বর"} />
 
       {/* ───── ভর্তির আহ্বান ───── */}
       <section className="border-y border-gold/40 bg-gold-light">

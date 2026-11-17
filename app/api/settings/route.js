@@ -10,7 +10,7 @@ import { audit } from "@/lib/audit";
 export const GET = handle(async () => {
   const u = await requireUser();
   const s = await getSettings();
-  const out = { schoolName: s.schoolName, schoolNameEn: s.schoolNameEn, taglineEn: s.taglineEn, logo: s.logo, address: s.address, phone: s.phone, email: s.email, about: s.about, tagline: s.tagline, currentSession: s.currentSession, classes: s.classes };
+  const out = { schoolName: s.schoolName, schoolNameEn: s.schoolNameEn, taglineEn: s.taglineEn, logo: s.logo, address: s.address, phone: s.phone, email: s.email, about: s.about, tagline: s.tagline, currentSession: s.currentSession, classes: s.classes, videos: s.videos || [], contacts: s.contacts || [] };
   if (u.perms.includes("settings.manage")) Object.assign(out, { paymentMethods: s.paymentMethods || [], openingBalances: s.openingBalances, rolePermissions: Object.fromEntries(ROLES.filter((r) => !["student", "parent", "superadmin"].includes(r)).map((r) => [r, resolvePerms(r, s.rolePermissions, s.permsKnown)])), permissionList: PERMISSIONS, restrictTeachers: s.restrictTeachers !== false });
   return json(out);
 });
@@ -35,6 +35,14 @@ export const PUT = handle(async (req) => {
     const removed = (await getSettings(true)).classes.map((c) => c.name).filter((n) => !names.includes(n));
     for (const n of removed) if (await Student.exists({ class: n, archived: { $ne: true } })) throw bad(`"${n}" শ্রেণিতে শিক্ষার্থী আছে — আগে সরান, তারপর শ্রেণি মুছুন`);
     upd.classes = b.classes.map((c) => ({ name: String(c.name).trim(), sections: [...new Set((c.sections || []).map((x) => String(x).trim()).filter(Boolean))] }));
+  }
+  if (b.videos !== undefined) {
+    if (!Array.isArray(b.videos) || b.videos.length > 30) throw bad("ভিডিওর তালিকা সঠিক নয় (সর্বোচ্চ ৩০টি)");
+    upd.videos = b.videos.map((v) => ({ title: String(v.title || "").trim().slice(0, 120), url: String(v.url || "").trim().slice(0, 500) })).filter((v) => v.url).map((v) => { if (!/^https?:\/\/\S+$/i.test(v.url)) throw bad(`ভিডিওর লিংক সঠিক নয়: ${v.url}`); return v; });
+  }
+  if (b.contacts !== undefined) {
+    if (!Array.isArray(b.contacts) || b.contacts.length > 40) throw bad("ফোন নম্বরের তালিকা সঠিক নয় (সর্বোচ্চ ৪০টি)");
+    upd.contacts = b.contacts.map((c) => ({ name: String(c.name || "").trim().slice(0, 80), role: String(c.role || "").trim().slice(0, 80), phone: String(c.phone || "").trim().slice(0, 30) })).filter((c) => c.name || c.phone).map((c) => { if (!c.name || !/^[\d+\-\s()]{5,30}$/.test(c.phone)) throw bad("প্রতিটি সারিতে নাম ও সঠিক ফোন নম্বর দিন"); return c; });
   }
   if (typeof b.restrictTeachers === "boolean") upd.restrictTeachers = b.restrictTeachers;
   if (b.openingBalances) { upd.openingBalances = {}; for (const a of PAY_METHODS) upd.openingBalances[a] = num(b.openingBalances[a], "প্রারম্ভিক জের", { req: false, min: -1e9 }) ?? 0; }

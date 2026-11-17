@@ -4,22 +4,35 @@ import { fmtTime } from "./AdmitCardView";
 import { DAYS } from "@/lib/routine-days";
 import { useLang } from "./LangProvider";
 
-// সাপ্তাহিক ক্লাস রুটিন — শিক্ষক ও শিক্ষার্থী দুজনের জন্য একই সুন্দর টেবিল (A4 PDF/প্রিন্ট সহ)
-// mode "teacher": প্রতিটি সারিতে শ্রেণি দেখায়; mode "student": শিক্ষকের নাম দেখায়
+// সাপ্তাহিক ক্লাস রুটিন — চৌকো ঘরের গ্রিড: বামে বার, উপরে সময়, প্রতিটি ঘরে বিষয় + (শ্রেণি/শিক্ষক)
+// mode "teacher": ঘরে শ্রেণি দেখায়; mode "student": শিক্ষকের নাম দেখায়
 export default function RoutineSheet({ items, mode, heading, filename, code }) {
   const { x } = useLang();
-  const th = { textAlign: "left", background: "#E8F1EC", color: "#0A4435", padding: "7px 8px", fontSize: 11, borderBottom: "2px solid #C49B3F" }, td = { padding: "7px 8px", borderBottom: "1px solid #e2e8f0", verticalAlign: "top" };
-  const order = [0, 1, 2, 3, 4, 5, 6];
-  const byDay = order.map((d) => ({ d, rows: items.filter((i) => i.day === d).sort((a, b) => a.startTime.localeCompare(b.startTime)) }));
+  const B = "1px solid #334155";
+  const th = { border: B, background: "#E5E7EB", color: "#0A4435", padding: "6px 4px", fontSize: 11, textAlign: "center", fontWeight: 700 };
+  const td = { border: B, padding: "6px 4px", textAlign: "center", verticalAlign: "middle", fontSize: 11.5, lineHeight: 1.35 };
+  const slots = [...new Map(items.map((i) => [`${i.startTime}-${i.endTime}`, { s: i.startTime, e: i.endTime }])).values()].sort((a, b) => a.s.localeCompare(b.s) || a.e.localeCompare(b.e));
+  const days = DAYS.map((name, d) => ({ d, name })).filter(({ d }) => items.some((i) => i.day === d));
+  const cell = (d, sl) => items.filter((i) => i.day === d && i.startTime === sl.s && i.endTime === sl.e);
   return (
-    <A4Doc title="সাপ্তাহিক ক্লাস রুটিন" titleEn="Weekly Class Routine" filename={filename} code={code}>
+    <A4Doc title={x("সাপ্তাহিক ক্লাস রুটিন")} filename={filename} code={code}>
       <p style={{ textAlign: "center", fontSize: 15, fontWeight: 700, color: "#0A4435", marginBottom: 12 }}>{heading}</p>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead><tr><th style={{ ...th, width: 90 }}>দিন</th><th style={th}>ক্লাসসমূহ (সময় — বিষয় — {mode === "teacher" ? "শ্রেণি" : "শিক্ষক"})</th></tr></thead>
-        <tbody>{byDay.filter((b) => b.rows.length).map((b) => <tr key={b.d} style={{ breakInside: "avoid" }}><td style={{ ...td, fontWeight: 700, color: "#0A4435" }}>{DAYS[b.d]}</td>
-          <td style={td}>{b.rows.map((r) => <div key={r._id} style={{ display: "flex", gap: 10, padding: "3px 0", borderBottom: "1px dashed #e2e8f0" }}><span style={{ width: 150, color: "#9A7623", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtTime(r.startTime)} – {fmtTime(r.endTime)}</span><span style={{ fontWeight: 600, flex: 1 }}>{x(r.subject)}</span><span style={{ color: "#475569" }}>{mode === "teacher" ? `${x(r.class)}${r.section ? ` (${r.section})` : ""}` : r.teacher}</span></div>)}</td></tr>)}
-          {items.length === 0 && <tr><td style={{ ...td, textAlign: "center", color: "#64748b" }} colSpan={2}>এখনও কোনো ক্লাস নির্ধারিত হয়নি</td></tr>}</tbody>
-      </table>
+      {items.length === 0 ? <p style={{ textAlign: "center", color: "#64748b" }}>{x("এখনও কোনো ক্লাস নির্ধারিত হয়নি")}</p> : (
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <thead>
+            <tr><th style={{ ...th, width: 64 }} rowSpan={2}>{x("বার")}</th><th style={th} colSpan={slots.length}>{x("সময় ও বিষয়")}</th></tr>
+            <tr>{slots.map((sl) => <th key={sl.s + sl.e} style={{ ...th, fontWeight: 600, fontSize: 10 }}>{fmtTime(sl.s)}<br />{fmtTime(sl.e)}</th>)}</tr>
+          </thead>
+          <tbody>{days.map(({ d, name }) => (
+            <tr key={d} style={{ breakInside: "avoid", height: 52 }}>
+              <td style={{ ...td, fontWeight: 700, color: "#0A4435", background: "#F3F4F6" }}>{x(name)}</td>
+              {slots.map((sl) => { const c = cell(d, sl); return (
+                <td key={sl.s + sl.e} style={td}>{c.length ? c.map((r) => <div key={r._id}><b>{x(r.subject)}</b><br /><span style={{ color: "#475569", fontSize: 10.5 }}>{mode === "teacher" ? `${x(r.class)}${r.section ? ` (${r.section})` : ""}` : r.teacher}</span></div>) : "—"}</td>
+              ); })}
+            </tr>
+          ))}</tbody>
+        </table>
+      )}
     </A4Doc>
   );
 }

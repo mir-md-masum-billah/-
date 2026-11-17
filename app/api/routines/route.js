@@ -17,7 +17,7 @@ export const GET = handle(async (req) => {
     if (isId(sp.get("teacher") || "")) f.teacher = sp.get("teacher");
     if (sp.get("class")) f.class = sp.get("class");
     if (sp.get("section")) f.section = sp.get("section");
-  } else if (u.role === "teacher") f.teacher = u.id;
+  } else if (["teacher", "headmaster", "admin", "superadmin"].includes(u.role)) f.teacher = u.id;
   else throw new HttpError(403, "অনুমতি নেই");
   const items = await RoutineSlot.find(f).sort({ day: 1, startTime: 1 }).populate("teacher", "name userId").lean();
   return json({ items });

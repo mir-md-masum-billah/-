@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import useSettings from "@/hooks/useSettings";
 import useMe from "@/hooks/useMe";
+import { printUrl } from "@/lib/print";
 import Modal from "@/components/Modal";
 import { api, Pager, Toast } from "@/components/CrudPage";
 import { months, feeCats, methodLabel } from "@/lib/school";
@@ -92,7 +93,7 @@ export default function Fees() {
             <tbody>{d.items.map((p) => (
               <tr key={p._id}><td className="td whitespace-nowrap">{p.receiptNo}</td><td className="td">{date(p.date)}</td><td className="td">{p.student?.name}</td><td className="td">{p.invoice?.title && x(p.invoice.title)}{p.type === "refund" && <span className="ml-1 rounded bg-amber-100 px-1.5 text-xs text-amber-800">{x("রিফান্ড")}</span>}</td>
                 <td className="td">{p.methodLabel || x(methodLabel[p.method])}<span className={`ml-1 rounded px-1.5 text-xs ${p.channel === "online" ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"}`}>{p.channel === "online" ? x("অনলাইন") : x("ক্যাশ/অফিস")}</span>{p.trxId && <span className="block text-xs text-slate-500">{p.trxId}</span>}</td><td className={`td font-bold ${p.type === "refund" ? "text-red-600" : "text-brand"}`}>{p.type === "refund" ? "−" : ""}{money(p.amount)}</td>
-                <td className="td whitespace-nowrap text-right"><a className="mr-3 font-semibold text-brand" href={`/admin/receipt/${p._id}`} target="_blank">{x("রসিদ")}</a>{can("fees.manage") && <button className="font-semibold text-red-600" onClick={() => ask(x("এই লেনদেন বাতিলের কারণ:"), "POST", `/api/payments/${p._id}/void`, x("লেনদেন বাতিল হয়েছে"))}>{x("বাতিল")}</button>}</td></tr>))}
+                <td className="td whitespace-nowrap text-right"><button className="mr-3 font-semibold text-brand" onClick={() => printUrl(`/admin/receipt/${p._id}`)}>{x("প্রিন্ট")}</button>{can("fees.manage") && <button className="font-semibold text-red-600" onClick={() => ask(x("এই লেনদেন বাতিলের কারণ:"), "POST", `/api/payments/${p._id}/void`, x("লেনদেন বাতিল হয়েছে"))}>{x("বাতিল")}</button>}</td></tr>))}
               {!loading && d.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={7}>{x("কোনো পেমেন্ট নেই")}</td></tr>}</tbody></table>
         )}
       </div>

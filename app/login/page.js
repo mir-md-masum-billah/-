@@ -23,10 +23,14 @@ export default function Login() {
 
   async function submit(e) {
     e.preventDefault(); setBusy(true); setErr("");
-    const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
-    const d = await r.json();
-    if (!r.ok) { setErr(d.error); setBusy(false); return; }
-    location.href = d.role === "student" ? "/student" : "/admin";
+    try {
+      const r = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setErr(d.error || (lang === "en" ? "Something went wrong. Please try again." : "সমস্যা হয়েছে, আবার চেষ্টা করুন")); setBusy(false); return; }
+      location.href = d.role === "student" ? "/student" : "/admin";
+    } catch {
+      setErr(lang === "en" ? "Network problem. Please check your internet connection." : "নেটওয়ার্ক সমস্যা — ইন্টারনেট যাচাই করুন"); setBusy(false);
+    }
   }
 
   return (

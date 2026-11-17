@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
+import PasswordDialog from "@/components/PasswordDialog";
 import Crest from "@/components/Crest";
 import Icon from "@/components/Icon";
 import Loader from "@/components/Loader";
@@ -11,6 +12,7 @@ import { useLang } from "@/components/LangProvider";
 import { school } from "@/lib/school";
 import { schoolEn, num, moneyL, dateL, monthName } from "@/lib/translations";
 import { confirmBox } from "@/components/Dialog";
+import { printUrl } from "@/lib/print";
 import StudentPay from "@/components/StudentPay";
 import StudentExams from "@/components/StudentExams";
 import RoutineSheet from "@/components/RoutineSheet";
@@ -56,6 +58,7 @@ export default function StudentPortal() {
       <nav className="sticky top-0 z-10 border-b border-gold/30 bg-white/95 backdrop-blur print:hidden" aria-label={t.portalMenu}><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`whitespace-nowrap border-b-[3px] px-4 py-3.5 font-semibold transition ${tab === k ? "border-gold text-brand-dark" : "border-transparent text-slate-500 hover:text-brand"}`}>{l}</button>)}</div></nav>
       <main className="mx-auto max-w-4xl space-y-5 p-4 sm:py-8 print:max-w-none print:space-y-0 print:p-0">
         {tab === "home" && <>
+          <div className="flex flex-wrap gap-2 print:hidden"><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print")}>{x("আমার প্রোফাইল প্রিন্ট")}</button><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print?mode=pay")}>{x("পেমেন্ট ইতিহাস প্রিন্ট")}</button><PasswordDialog className="btn-ghost !py-2" /></div>
           <div className="lattice flex items-center gap-5 overflow-hidden rounded-2xl bg-night p-5 text-white shadow-gilt sm:gap-7 sm:p-7">
             <div className="shrink-0 rounded-t-full border border-gold-soft/70 p-1">
               {s.photo ? <img src={s.photo} alt="" className="h-28 w-24 rounded-t-full object-cover sm:h-32 sm:w-28" /> : <div className="grid h-28 w-24 place-items-center rounded-t-full bg-brand font-display text-4xl text-gold-soft sm:h-32 sm:w-28">{s.name[0]}</div>}
@@ -89,7 +92,7 @@ export default function StudentPortal() {
             <tbody>{invoices.map((i) => <tr key={i._id}><td className="td">{i.title}{i.period && ` — ${mo(i.month - 1)} ${i.year}`}</td><td className="td">{money(i.obligation)}</td><td className="td">{money(i.paid)}</td><td className={`td font-bold ${i.due > 0 ? "text-red-600" : "text-brand"}`}>{i.due > 0 ? money(i.due) : t.settled}</td></tr>)}
               {invoices.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={4}>{t.noFees}</td></tr>}</tbody></table></div>
           <div className="card overflow-x-auto !p-0"><Title>{t.payTitle}</Title><table className="w-full min-w-[480px]"><thead><tr>{t.payCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-            <tbody>{payments.map((p) => <tr key={p._id}><td className="td">{p.date}</td><td className="td"><a className="font-semibold text-brand underline decoration-gold underline-offset-4" href={`/student/receipt/${p._id}`} target="_blank">{p.receiptNo}</a></td><td className="td">{p.invoice?.title}{p.type === "refund" && ` (${t.refund})`}</td><td className="td">{methodLabel[p.method]}</td><td className="td font-semibold">{p.type === "refund" ? "−" : ""}{money(p.amount)}</td></tr>)}
+            <tbody>{payments.map((p) => <tr key={p._id}><td className="td">{p.date}</td><td className="td"><span className="font-semibold">{p.receiptNo}</span> <button className="ml-2 font-semibold text-brand underline decoration-gold underline-offset-4" onClick={() => printUrl(`/student/receipt/${p._id}`)}>{x("প্রিন্ট")}</button></td><td className="td">{p.invoice?.title}{p.type === "refund" && ` (${t.refund})`}</td><td className="td">{methodLabel[p.method]}</td><td className="td font-semibold">{p.type === "refund" ? "−" : ""}{money(p.amount)}</td></tr>)}
               {payments.length === 0 && <tr><td className="td py-6 text-center text-slate-500" colSpan={5}>{t.noPay}</td></tr>}</tbody></table></div>
         </>}
 
@@ -98,7 +101,7 @@ export default function StudentPortal() {
 
         {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">{t.noResults}</p>}
           {Object.entries(groups).map(([name, rows]) => { const got = rows.reduce((t, r) => t + r.marks, 0), full = rows.reduce((t, r) => t + r.full, 0); return (
-            <div key={name} className="card overflow-x-auto !p-0"><Title>{name}</Title><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <div key={name} className="card overflow-x-auto !p-0"><div className="flex items-center justify-between gap-2 pr-4"><Title>{name}</Title><button className="btn-primary !py-1.5 text-sm" onClick={() => printUrl(`/student/result?exam=${encodeURIComponent(rows[0].exam)}&year=${rows[0].year}`)}>{x("রেজাল্ট কার্ড প্রিন্ট")}</button></div><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
               <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td></tr>)}<tr className="bg-gold-light/60 font-bold"><td className="td">{t.total}</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td></tr></tbody></table></div>); })}</>}
 
         {tab === "lv" && <>

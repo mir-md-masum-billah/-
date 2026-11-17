@@ -1,7 +1,7 @@
 import { withTx } from "@/lib/db";
 import { requireUser } from "@/lib/guard";
 import { Invoice, Student, FEE_CATEGORIES } from "@/lib/models";
-import { handle, ok, bad, num, isId, HttpError } from "@/lib/http";
+import { handle, ok, bad, num, isId, HttpError, own } from "@/lib/http";
 import { nextNo, round2 } from "@/lib/finance";
 import { isDate, isFuture, todayDhaka } from "@/lib/dates";
 import { recordPayment } from "@/lib/pay";
@@ -22,10 +22,11 @@ export const POST = handle(async (req) => {
     if (!inScope(await visibleScopes(user), s.class, s.section)) throw new HttpError(403, "এই শিক্ষার্থীর ফি নেওয়ার অনুমতি নেই");
     let invId = b.invoice;
     if (invId) {
+      if (!isId(String(invId))) throw bad("ইনভয়েস পাওয়া যায়নি");
       const inv = await Invoice.findOne({ _id: invId, student: s._id }).select("_id").session(session);
       if (!inv) throw bad("ইনভয়েস পাওয়া যায়নি");
     } else {
-      if (!FEE_CATEGORIES[b.category]) throw bad("পেমেন্টের ধরন বাছাই করুন");
+      if (!own(FEE_CATEGORIES, b.category)) throw bad("পেমেন্টের ধরন বাছাই করুন");
       const period = b.period || "";
       if (period && !/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw bad("মাস সঠিক নয়");
       if (b.category === "tuition" && !period) throw bad("মাসিক বেতনের জন্য মাস দিন");

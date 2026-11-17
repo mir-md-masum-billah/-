@@ -13,7 +13,7 @@ export const GET = handle(async (req, { params }) => {
   await connectDB();
   const sp = new URL(req.url).searchParams;
   const filter = {};
-  (c.filters || []).forEach((k) => { const v = sp.get(k); if (v !== null && v !== "") filter[k] = v === "true" ? true : v === "false" ? false : v; });
+  (c.filters || []).forEach((k) => { const v = sp.get(k); if (v !== null && v !== "") filter[k] = v === "true" ? true : v === "false" ? false : (k === "role" && v.includes(",")) ? { $in: v.split(",").slice(0, 8) } : v; });
   if (c.archive && sp.get("archived") !== "true") filter.archived = { $ne: true };
   const q = (sp.get("q") || "").trim().slice(0, 60);
   const and = [];

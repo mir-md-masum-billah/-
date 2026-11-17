@@ -7,8 +7,9 @@ export async function middleware(req) {
   const token = req.cookies.get("token")?.value;
   const s = token ? await verifyToken(token) : null;
   const go = (p) => NextResponse.redirect(new URL(p, req.url));
-  if (pathname.startsWith("/admin")) { if (!s) return go("/login"); if (s.role === "student" || s.role === "parent") return go("/student"); }
-  if (pathname.startsWith("/student")) { if (!s) return go("/login"); if (s.role !== "student") return go("/admin"); }
+  const STAFF = ["superadmin", "admin", "headmaster", "accountant", "teacher", "staff"];
+  if (pathname.startsWith("/admin")) { if (!s) return go("/login"); if (s.role === "student") return go("/student"); if (!STAFF.includes(s.role)) return go("/login"); }
+  if (pathname.startsWith("/student")) { if (!s) return go("/login"); if (s.role !== "student") return go(STAFF.includes(s.role) ? "/admin" : "/login"); }
   return NextResponse.next();
 }
 export const config = { matcher: ["/admin/:path*", "/student/:path*"] };

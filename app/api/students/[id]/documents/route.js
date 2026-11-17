@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/guard";
 import { Student } from "@/lib/models";
 import { handle, ok, bad, isId, HttpError } from "@/lib/http";
 import { audit } from "@/lib/audit";
+import { deleteFromR2 } from "@/lib/r2";
 
 async function load(params) {
   const user = await requireUser("students.write");
@@ -31,7 +32,9 @@ export const DELETE = handle(async (req, { params }) => {
   const doc = new URL(req.url).searchParams.get("doc");
   const d = s.documents.id(doc);
   if (!d) throw new HttpError(404, "কাগজ পাওয়া যায়নি");
-  const name = d.name; d.deleteOne(); await s.save();
+  const name = d.name, url = d.url; d.deleteOne(); await s.save();
+  const base = process.env.R2_PUBLIC_URL; // স্টোরেজে ফাইল পড়ে থাকে না (best-effort; ব্যর্থ হলে রেকর্ড মোছা বহাল থাকে)
+  if (base && typeof url === "string" && url.startsWith(base + "/")) await deleteFromR2(url.slice(base.length + 1)).catch((e) => console.error("R2 delete failed", e));
   await audit(user, "remove_document", "students", s._id, { name });
   return ok();
 });

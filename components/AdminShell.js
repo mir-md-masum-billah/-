@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
+import PasswordDialog from "./PasswordDialog";
 import Crest from "./Crest";
 import Icon from "./Icon";
 import LanguageSwitch from "./LanguageSwitch";
@@ -37,7 +38,7 @@ export default function AdminShell({ session, schoolName, children }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const items = nav.filter((n) => (!n.perm || session.perms.includes(n.perm)) && (!n.role || session.role === n.role));
+  const items = nav.filter((n) => (!n.perm || session.perms.includes(n.perm)) && (!n.role || (n.role === "teacher" ? ["teacher", "headmaster", "admin", "superadmin"].includes(session.role) : session.role === n.role)));
   return (
     <div className="min-h-screen lg:flex print:block">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/25 bg-night px-4 py-3 text-white lg:hidden print:hidden">
@@ -69,6 +70,7 @@ export default function AdminShell({ session, schoolName, children }) {
         <div className="space-y-1 border-t border-gold/20 p-3">
           <div className="flex items-center justify-between gap-2 px-1 pb-2"><LanguageSwitch /><ThemeToggle /></div>
           <Link href="/" className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-white/70 transition hover:bg-white/[0.05] hover:text-white"><Icon name="globe" className="h-[18px] w-[18px]" />{t.shell.viewSite}</Link>
+          <PasswordDialog className="btn w-full justify-start !px-3 !py-2 text-sm text-white/70 hover:bg-white/[0.05] hover:text-white" />
           <LogoutButton className="btn w-full justify-start !px-3 !py-2 text-sm text-white/70 hover:bg-white/[0.05] hover:text-white" />
         </div>
       </aside>

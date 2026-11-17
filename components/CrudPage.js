@@ -35,7 +35,7 @@ export function Toast({ msg }) {
 }
 
 // ব্যবহার: <CrudPage resource title columns fields defaults query canWrite deleteLabel />
-export default function CrudPage({ resource, title, columns, fields, defaults = {}, query = "", addLabel = "নতুন যোগ করুন", canWrite = true, rowActions, deleteLabel = "মুছুন", deleteConfirm = "সত্যিই মুছে ফেলবেন?", toolbar }) {
+export default function CrudPage({ resource, title, columns, fields, defaults = {}, query = "", addLabel = "নতুন যোগ করুন", canWrite = true, rowActions, deleteLabel = "মুছুন", deleteConfirm = "সত্যিই মুছে ফেলবেন?", toolbar, prefill }) {
   const { x } = useLang();
   const [data, setData] = useState({ items: [], total: 0, pages: 1 });
   const [page, setPage] = useState(1);
@@ -58,7 +58,7 @@ export default function CrudPage({ resource, title, columns, fields, defaults = 
     fields.filter((f) => f.ref).forEach(async (f) => { const r = await api("GET", `/api/${f.ref}?limit=1000${f.refQuery ?? "&active=true"}`); if (r.ok) setRefs((p) => ({ ...p, [f.ref]: r.d.items })); });
   }, []); // eslint-disable-line
 
-  const openNew = () => { setErr(""); setForm({ ...defaults }); };
+  const openNew = () => { setErr(""); setForm({ ...defaults }); if (prefill) prefill().then((p) => setForm((f) => (f && !f._id ? { ...p, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined && v !== "")) } : f))).catch(() => {}); };
   const openEdit = (row) => { setErr(""); const f = { ...row, password: "" }; fields.filter((x) => x.ref).forEach((x) => (f[x.key] = row[x.key]?._id || row[x.key])); setForm(f); };
 
   async function save(e) {

@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { requireUser } from "@/lib/guard";
 import { Application, LoginAttempt } from "@/lib/models";
-import { handle, json, ok, bad, esc, HttpError } from "@/lib/http";
+import { handle, json, ok, bad, esc, HttpError, clientIp } from "@/lib/http";
 import { getSettings } from "@/lib/settings";
 import { isDate, isFuture } from "@/lib/dates";
 
@@ -10,7 +10,7 @@ export const POST = handle(async (req) => {
   await connectDB();
   const b = await req.json();
   if (b.website) return ok(); // বট ধরা পড়লে নীরবে সফল দেখায়, কিছু সংরক্ষণ হয় না
-  const ip = (req.headers.get("x-forwarded-for") || "local").split(",")[0].trim();
+  const ip = clientIp(req);
   const a = await LoginAttempt.findOneAndUpdate({ key: `app|${ip}` }, { $inc: { count: 1 }, $set: { expireAt: new Date(Date.now() + 3600e3) } }, { upsert: true, new: true });
   if (a.count > 5) throw new HttpError(429, "অনেকগুলো আবেদন এসেছে — এক ঘণ্টা পরে চেষ্টা করুন");
   const st = await getSettings();
