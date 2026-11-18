@@ -6,6 +6,7 @@ import { handle, json, ok, bad, num } from "@/lib/http";
 import { getSettings, bustSettings } from "@/lib/settings";
 import { PERMISSIONS, DEFAULT_PERMS, ROLES, resolvePerms } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
+import { validPhone } from "@/lib/phone";
 
 export const GET = handle(async () => {
   const u = await requireUser();
@@ -42,7 +43,12 @@ export const PUT = handle(async (req) => {
   }
   if (b.contacts !== undefined) {
     if (!Array.isArray(b.contacts) || b.contacts.length > 40) throw bad("ফোন নম্বরের তালিকা সঠিক নয় (সর্বোচ্চ ৪০টি)");
-    upd.contacts = b.contacts.map((c) => ({ name: String(c.name || "").trim().slice(0, 80), role: String(c.role || "").trim().slice(0, 80), phone: String(c.phone || "").trim().slice(0, 30) })).filter((c) => c.name || c.phone).map((c) => { if (!c.name || !/^[\d+\-\s()]{5,30}$/.test(c.phone)) throw bad("প্রতিটি সারিতে নাম ও সঠিক ফোন নম্বর দিন"); return c; });
+    // সম্পূর্ণ ফাঁকা সারি বাদ; ফোন নম্বর আবশ্যক, নাম বা পদ — অন্তত একটি। বাংলা/ইংরেজি দুই অঙ্কেই চলে
+    upd.contacts = b.contacts.map((c) => ({ name: String(c?.name || "").trim().slice(0, 80), role: String(c?.role || "").trim().slice(0, 80), phone: String(c?.phone || "").trim().slice(0, 30) })).filter((c) => c.name || c.role || c.phone).map((c, i) => {
+      if (!c.phone || !validPhone(c.phone)) throw bad(`${i + 1} নম্বর সারিতে সঠিক ফোন নম্বর দিন (শুধু অঙ্ক, + ও - চলবে)`);
+      if (!c.name && !c.role) throw bad(`${i + 1} নম্বর সারিতে নাম বা পদবী দিন`);
+      return c;
+    });
   }
   if (typeof b.restrictTeachers === "boolean") upd.restrictTeachers = b.restrictTeachers;
   if (b.openingBalances) { upd.openingBalances = {}; for (const a of PAY_METHODS) upd.openingBalances[a] = num(b.openingBalances[a], "প্রারম্ভিক জের", { req: false, min: -1e9 }) ?? 0; }

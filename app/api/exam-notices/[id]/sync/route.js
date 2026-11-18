@@ -15,6 +15,7 @@ export const POST = handle(async (_r, { params }) => {
   const e = await ExamNotice.findById(id);
   if (!e) throw new HttpError(404, "নোটিশ পাওয়া যায়নি");
   if (!inScope(await visibleScopes(user), e.class, e.section)) throw new HttpError(403, "অনুমতি নেই");
+  if (e.archived) throw new HttpError(400, "সরানো নোটিশে নতুন ইনভয়েস তৈরি করা যায় না");
   const r = await withTx(async (session) => { const g = await generateForExam(e, session); await audit(user, "sync", "exam_notice", e._id, { name: e.name, ...g }, session); return g; });
   return ok(r);
 });

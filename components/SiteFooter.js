@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { getLang } from "@/lib/lang";
 import { tr, digits } from "@/lib/translations";
 import { getDashboardHref } from "@/lib/session";
+import { telHref } from "@/lib/phone";
 
 export default async function SiteFooter({ school }) {
   const lang = await getLang();
@@ -32,7 +33,10 @@ export default async function SiteFooter({ school }) {
           <span className="gold-rule mt-2" />
           <ul className="mt-4 space-y-3 text-white/80">
             {school.address && <li className="flex items-start gap-3"><Icon name="pin" className="mt-1 h-5 w-5 shrink-0 text-gold-soft" /><span>{school.address}</span></li>}
-            {school.phone && <li className="flex items-center gap-3"><Icon name="phone" className="h-5 w-5 shrink-0 text-gold-soft" /><a href={`tel:${String(school.phone).replace(/[^\d+]/g, "")}`} className="transition hover:text-gold-soft">{school.phone}</a></li>}
+            {school.phone && <li className="flex items-center gap-3"><Icon name="phone" className="h-5 w-5 shrink-0 text-gold-soft" /><a href={telHref(school.phone)} className="transition hover:text-gold-soft">{school.phone}</a></li>}
+            {(school.contacts || []).map((c, i) => (
+              <li key={i} className="flex items-start gap-3"><Icon name="phone" className="mt-1 h-5 w-5 shrink-0 text-gold-soft" />
+                <span className="min-w-0"><span className="block text-white/60 text-sm">{[c.role, c.name].filter(Boolean).join(" — ")}</span><a href={telHref(c.phone)} className="font-semibold transition hover:text-gold-soft">{c.phone}</a></span></li>))}
             {school.email && <li className="flex items-center gap-3"><Icon name="mail" className="h-5 w-5 shrink-0 text-gold-soft" /><a href={`mailto:${school.email}`} className="break-all transition hover:text-gold-soft">{school.email}</a></li>}
           </ul>
         </div>

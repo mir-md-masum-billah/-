@@ -6,7 +6,7 @@ import { handle, cachedJson } from "@/lib/http";
 export const GET = handle(async (req) => {
   await connectDB();
   const sp = new URL(req.url).searchParams;
-  const f = { status: "published" };
+  const f = { status: "published", archived: { $ne: true } };
   if (sp.get("class")) { f.class = String(sp.get("class")).slice(0, 30); if (sp.get("section")) f.section = { $in: ["", String(sp.get("section")).slice(0, 30)] }; }
   const items = await ExamNotice.find(f).sort({ createdAt: -1 }).limit(40).select("-createdByName -batch").lean();
   return cachedJson({ items }, 30);

@@ -7,6 +7,7 @@ import { methodLabel } from "@/lib/school";
 import Loader from "@/components/Loader";
 import Crest from "@/components/Crest";
 import { isPlaceholder } from "@/lib/school";
+import { validPhone } from "@/lib/phone";
 
 const hints = { address: "গ্রাম/এলাকা, উপজেলা, জেলা", phone: "01XXXXXXXXX", email: "school@example.com" };
 
@@ -24,11 +25,24 @@ async function shrinkImage(file) {
 }
 
 export default function SettingsPage() {
-  const { x } = useLang();
+  const { x, n } = useLang();
   const fileRef = useRef(null);
   const [s, setS] = useState(null); const [err, setErr] = useState(""); const [toast, setToast] = useState("");
   const load = () => api("GET", "/api/settings").then((r) => (r.ok ? setS({ ...r.d, classText: r.d.classes.map((c) => ({ name: c.name, sections: (c.sections || []).join(", ") })) }) : setErr(r.d.error || x("লোড করা যায়নি"))));
   useEffect(() => { load(); }, []);
+  const [cErr, setCErr] = useState("");
+  // ফোন নম্বর: ফাঁকা সারি বাদ দিয়ে, ভুল থাকলে ওই অংশেই বার্তা দেখিয়ে সংরক্ষণ
+  const saveContacts = async () => {
+    setCErr("");
+    const list = (s.contacts || []).map((c) => ({ role: (c.role || "").trim(), name: (c.name || "").trim(), phone: (c.phone || "").trim() })).filter((c) => c.role || c.name || c.phone);
+    for (let i = 0; i < list.length; i++) {
+      if (!list[i].phone || !validPhone(list[i].phone)) return setCErr(x("{0} নম্বর সারিতে সঠিক ফোন নম্বর দিন (শুধু অঙ্ক, + ও - চলবে)", n(i + 1)));
+      if (!list[i].name && !list[i].role) return setCErr(x("{0} নম্বর সারিতে নাম বা পদবী দিন", n(i + 1)));
+    }
+    const r = await api("PUT", "/api/settings", { contacts: list });
+    if (!r.ok) return setCErr(r.d.error || x("সংরক্ষণ ব্যর্থ"));
+    setToast(x("✅ সংরক্ষিত")); setTimeout(() => setToast(""), 2500); load();
+  };
   const save = async (body, ok = x("✅ সংরক্ষিত")) => { setErr(""); const r = await api("PUT", "/api/settings", body); if (!r.ok) return setErr(r.d.error || x("সংরক্ষণ ব্যর্থ")); setToast(ok); setTimeout(() => setToast(""), 2500); load(); };
   if (err && !s) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
   if (!s) return <Loader compact label={x("লোড হচ্ছে...")} />;
@@ -69,9 +83,11 @@ export default function SettingsPage() {
         <div className="flex gap-3"><button className="btn-ghost" onClick={() => setS({ ...s, videos: [...(s.videos || []), { title: "", url: "" }] })}>{x("+ ভিডিও যোগ")}</button><button className="btn-primary" onClick={() => save({ videos: s.videos || [] })}>{x("সংরক্ষণ")}</button></div></section>
 
       <section className="card space-y-4"><h2 className="font-bold">{x("হোমপেজ: ফোন নম্বর")}</h2>
-        <p className="text-sm text-slate-600">{x("আলাদা আলাদা মানুষের (প্রধান শিক্ষক, অফিস ইত্যাদি) নাম, পদ ও ফোন নম্বর যোগ করুন — হোমপেজে দেখাবে।")}</p>
-        {(s.contacts || []).map((c, i) => { const set = (k, v) => setS({ ...s, contacts: s.contacts.map((y, j) => (j === i ? { ...y, [k]: v } : y)) }); return <div key={i} className="flex flex-wrap gap-2"><input className="input !w-44" placeholder={x("নাম")} value={c.name || ""} onChange={(e) => set("name", e.target.value)} /><input className="input !w-40" placeholder={x("পদ (যেমন: প্রধান শিক্ষক)")} value={c.role || ""} onChange={(e) => set("role", e.target.value)} /><input className="input min-w-0 flex-1" placeholder="01XXXXXXXXX" value={c.phone || ""} onChange={(e) => set("phone", e.target.value)} /><button type="button" className="btn-ghost !border-red-300 !px-3 !text-red-700" onClick={() => setS({ ...s, contacts: s.contacts.filter((_, j) => j !== i) })}>×</button></div>; })}
-        <div className="flex gap-3"><button className="btn-ghost" onClick={() => setS({ ...s, contacts: [...(s.contacts || []), { name: "", role: "", phone: "" }] })}>{x("+ নম্বর যোগ")}</button><button className="btn-primary" onClick={() => save({ contacts: s.contacts || [] })}>{x("সংরক্ষণ")}</button></div></section>
+        <p className="text-sm text-slate-600">{x("পদবী, নাম ও ফোন নম্বর যোগ করুন (যেমন: প্রধান শিক্ষক, অফিস)। এগুলো হোমপেজের ফোন নম্বর অংশে এবং পেজের নিচের \"যোগাযোগ\" অংশে দেখাবে। বাংলা বা ইংরেজি — যেকোনো অঙ্কে লিখতে পারবেন।")}</p>
+        {(s.contacts || []).length > 0 && <div className="hidden gap-2 px-1 text-xs font-semibold text-slate-500 sm:grid sm:grid-cols-[1fr_1fr_1fr_auto]"><span>{x("পদবী")}</span><span>{x("নাম")}</span><span>{x("ফোন নম্বর")}</span><span className="w-10" /></div>}
+        {(s.contacts || []).map((c, i) => { const set = (k, v) => setS((p) => ({ ...p, contacts: p.contacts.map((y, j) => (j === i ? { ...y, [k]: v } : y)) })); return <div key={i} className="grid gap-2 rounded-xl border border-slate-200 p-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:border-0 sm:p-0"><input className="input min-w-0" aria-label={x("পদবী")} placeholder={x("পদবী (যেমন: প্রধান শিক্ষক)")} value={c.role || ""} onChange={(e) => set("role", e.target.value)} /><input className="input min-w-0" aria-label={x("নাম")} placeholder={x("নাম")} value={c.name || ""} onChange={(e) => set("name", e.target.value)} /><input className="input min-w-0" inputMode="tel" aria-label={x("ফোন নম্বর")} placeholder="01XXXXXXXXX" value={c.phone || ""} onChange={(e) => set("phone", e.target.value)} /><button type="button" aria-label={x("মুছুন")} className="btn-ghost !border-red-300 !px-3 !text-red-700" onClick={() => setS((p) => ({ ...p, contacts: p.contacts.filter((_, j) => j !== i) }))}>×</button></div>; })}
+        {cErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{cErr}</p>}
+        <div className="flex flex-wrap gap-3"><button type="button" className="btn-ghost" onClick={() => { setCErr(""); setS((p) => ({ ...p, contacts: [...(p.contacts || []), { name: "", role: "", phone: "" }] })); }}>{x("+ নম্বর যোগ")}</button><button type="button" className="btn-primary" onClick={saveContacts}>{x("সংরক্ষণ")}</button></div></section>
 
       <section className="card space-y-3"><h2 className="font-bold">{x("শ্রেণি ও শাখা")}</h2><p className="text-sm text-slate-600">{x("শাখা কমা দিয়ে লিখুন (যেমন: ক, খ)। শিক্ষার্থী আছে এমন শ্রেণি মুছা যাবে না।")}</p>
         {s.classText.map((c, i) => <div key={i} className="flex gap-2"><input className="input !w-40" value={c.name} onChange={(e) => { const n = [...s.classText]; n[i] = { ...c, name: e.target.value }; setS({ ...s, classText: n }); }} /><input className="input" placeholder={x("শাখা")} value={c.sections} onChange={(e) => { const n = [...s.classText]; n[i] = { ...c, sections: e.target.value }; setS({ ...s, classText: n }); }} /><button className="px-2 text-red-600" aria-label={x("মুছুন")} onClick={() => setS({ ...s, classText: s.classText.filter((_, j) => j !== i) })}>✕</button></div>)}

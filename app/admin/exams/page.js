@@ -8,6 +8,7 @@ import useSettings from "@/hooks/useSettings";
 import { useLang } from "@/components/LangProvider";
 import { confirmBox } from "@/components/Dialog";
 import { fmtTime } from "@/components/AdmitCardView";
+import { todayDhaka } from "@/lib/dates";
 
 const F = ({ l, children, className }) => <div className={className}><label className="label">{l}</label>{children}</div>;
 const emptyRow = () => ({ subject: "", date: "", startTime: "10:00", endTime: "12:00" });
@@ -16,9 +17,9 @@ export default function Exams() {
   const { x, n, money, date } = useLang(); const st = useSettings();
   const [d, setD] = useState(null); const [page, setPage] = useState(1); const [err, setErr] = useState(""); const [toast, setToast] = useState("");
   const [modal, setModal] = useState(null); const [form, setForm] = useState({}); const [mErr, setMErr] = useState(""); const [busy, setBusy] = useState(false);
-  const [subjects, setSubjects] = useState([]); const [cards, setCards] = useState(null);
+  const [subjects, setSubjects] = useState([]); const [cards, setCards] = useState(null); const [arch, setArch] = useState(false);
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3500); };
-  const load = useCallback(async () => { const r = await api("GET", `/api/exam-notices?page=${page}&limit=20`); r.ok ? (setD(r.d), setErr("")) : setErr(r.d.error || x("লোড করা যায়নি")); }, [page]);
+  const load = useCallback(async () => { const r = await api("GET", `/api/exam-notices?page=${page}&limit=20${arch ? "&archived=1" : ""}`); r.ok ? (setD(r.d), setErr("")) : setErr(r.d.error || x("লোড করা যায়নি")); }, [page, arch]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { api("GET", "/api/subjects?limit=1000").then((r) => r.ok && setSubjects(r.d.items)); }, []);
 
@@ -49,19 +50,26 @@ export default function Exams() {
   }
   async function openCards(e) { const r = await api("GET", `/api/exam-notices/${e._id}/admit-cards`); if (r.ok) setCards({ exam: e, ...r.d }); else flash("⚠ " + (r.d.error || x("লোড করা যায়নি"))); }
   async function sync(e) { const r = await api("POST", `/api/exam-notices/${e._id}/sync`); flash(r.ok ? x("✅ নতুন ইনভয়েস {0}, প্রবেশপত্র {1}", r.d.invoices, r.d.cards) : "⚠ " + r.d.error); }
-  async function del(e) { if (!(await confirmBox(x("\"{0}\" নোটিশটি মুছবেন? ফি জমা না হলে ইনভয়েস বাতিল ও প্রবেশপত্র মুছে যাবে।", e.name), { danger: true }))) return; const r = await api("DELETE", `/api/exam-notices/${e._id}`); flash(r.ok ? x("✅ মোছা হয়েছে") : "⚠ " + r.d.error); load(); }
+  async function del(e) {
+    const ended = (e.schedule || []).length && [...e.schedule].map((r) => r.date).sort().pop() < todayDhaka();
+    const msg = ended ? x("\"{0}\" নোটিশটি সরাবেন? ফি জমা থাকলে নোটিশ শুধু হোমপেজ ও শিক্ষার্থীর তালিকা থেকে সরে যাবে — ইনভয়েস, পেমেন্ট ও প্রবেশপত্রের হিসাব অক্ষত থাকবে।", e.name) : x("\"{0}\" নোটিশটি মুছবেন? ফি জমা না হলে ইনভয়েস বাতিল ও প্রবেশপত্র মুছে যাবে।", e.name);
+    if (!(await confirmBox(msg, { danger: true }))) return;
+    const r = await api("DELETE", `/api/exam-notices/${e._id}`);
+    flash(r.ok ? (r.d.archived ? x("✅ নোটিশ সরানো হয়েছে (হিসাব অক্ষত)") : x("✅ মোছা হয়েছে")) : "⚠ " + r.d.error); load();
+  }
+  async function restore(e) { const r = await api("PATCH", `/api/exam-notices/${e._id}`, { archived: false }); flash(r.ok ? x("✅ নোটিশ ফিরিয়ে আনা হয়েছে") : "⚠ " + r.d.error); load(); }
   const openNew = () => { setMErr(""); setForm({ name: "", targets: [], schedule: [emptyRow()], fee: "", instructions: "" }); setModal("form"); };
   const openEdit = (e) => { setMErr(""); setForm({ id: e._id, name: e.name, targets: [{ class: e.class, section: e.section || "" }], schedule: e.schedule.map((r) => ({ ...r })), fee: e.fee, instructions: e.instructions || "" }); setModal("form"); };
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-3xl text-brand-dark">{x("পরীক্ষার নোটিশ")}</h1><button className="btn-primary" onClick={openNew}>{x("+ নতুন নোটিশ")}</button></div>
+      <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-3xl text-brand-dark">{x("পরীক্ষার নোটিশ")}</h1><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={arch} onChange={(e) => { setArch(e.target.checked); setPage(1); }} /> {x("সরানো নোটিশ দেখুন")}</label><button className="btn-primary" onClick={openNew}>{x("+ নতুন নোটিশ")}</button></div>
       <p className="mb-3 rounded-lg bg-brand-light p-3 text-sm">{x("নোটিশ প্রকাশ হলেই সংশ্লিষ্ট শ্রেণি-শাখার শিক্ষার্থীরা নিজেদের অ্যাকাউন্টে নোটিশ ও পরীক্ষার ফি দেখে, আর হোমপেজেও নোটিশ দেখা যায়। ফি অনুমোদনের পর প্রবেশপত্র স্বয়ংক্রিয়ভাবে তৈরি হয়।")}</p>
       {err && <p className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[760px]"><thead><tr>{["পরীক্ষা", "শ্রেণি/শাখা", "তারিখ", "বিষয়", "ফি", ""].map((h, i) => <th key={i} className="th">{x(h)}</th>)}</tr></thead>
-        <tbody>{d?.items.map((e) => { const ds = e.schedule.map((r) => r.date).sort(); return <tr key={e._id}><td className="td font-semibold">{e.name}<span className="block text-xs font-normal text-slate-500">{e.createdByName}</span></td><td className="td">{x(e.class)}{e.section ? ` (${e.section})` : ` — ${x("সব শাখা")}`}</td><td className="td whitespace-nowrap">{date(ds[0])}{ds.length > 1 && ` → ${date(ds[ds.length - 1])}`}</td><td className="td">{x("{0} টি", e.schedule.length)}</td><td className="td">{e.fee > 0 ? money(e.fee) : "—"}</td>
-          <td className="td whitespace-nowrap text-right"><Link target="_blank" href={`/exam-notice/${e._id}`} className="mr-3 font-semibold text-brand">{x("PDF/প্রিন্ট")}</Link><button className="mr-3 font-semibold text-slate-700" onClick={() => openCards(e)}>{x("প্রবেশপত্র")}</button><button className="mr-3 font-semibold text-slate-700" onClick={() => sync(e)}>{x("নতুনদের যোগ")}</button><button className="mr-3 font-semibold text-slate-700" onClick={() => openEdit(e)}>{x("সম্পাদনা")}</button><button className="font-semibold text-red-600" onClick={() => del(e)}>{x("মুছুন")}</button></td></tr>; })}
-          {d && d.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={6}>{x("কোনো নোটিশ নেই")}</td></tr>}</tbody></table></div>
+        <tbody>{d?.items.map((e) => { const ds = e.schedule.map((r) => r.date).sort(); return <tr key={e._id}><td className="td font-semibold">{e.name}<span className="block text-xs font-normal text-slate-500">{e.createdByName}</span>{ds.length > 0 && ds[ds.length - 1] < todayDhaka() && <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-600">{x("পরীক্ষা শেষ")}</span>}</td><td className="td">{x(e.class)}{e.section ? ` (${e.section})` : ` — ${x("সব শাখা")}`}</td><td className="td whitespace-nowrap">{date(ds[0])}{ds.length > 1 && ` → ${date(ds[ds.length - 1])}`}</td><td className="td">{x("{0} টি", e.schedule.length)}</td><td className="td">{e.fee > 0 ? money(e.fee) : "—"}</td>
+          <td className="td whitespace-nowrap text-right"><Link target="_blank" href={`/exam-notice/${e._id}`} className="mr-3 font-semibold text-brand">{x("PDF/প্রিন্ট")}</Link><button className="mr-3 font-semibold text-slate-700" onClick={() => openCards(e)}>{x("প্রবেশপত্র")}</button>{arch ? <button className="font-semibold text-brand" onClick={() => restore(e)}>{x("ফিরিয়ে আনুন")}</button> : <><button className="mr-3 font-semibold text-slate-700" onClick={() => sync(e)}>{x("নতুনদের যোগ")}</button><button className="mr-3 font-semibold text-slate-700" onClick={() => openEdit(e)}>{x("সম্পাদনা")}</button><button className="font-semibold text-red-600" onClick={() => del(e)}>{x("মুছুন / সরান")}</button></>}</td></tr>; })}
+          {d && d.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={6}>{arch ? x("কোনো সরানো নোটিশ নেই") : x("কোনো নোটিশ নেই")}</td></tr>}</tbody></table></div>
       {d && <Pager page={page} pages={d.pages} total={d.total} setPage={setPage} />}
 
       {modal === "form" && <Modal wide title={form.id ? x("নোটিশ সম্পাদনা") : x("নতুন পরীক্ষার নোটিশ")} onClose={() => setModal(null)}><form className="space-y-4" onSubmit={save}>

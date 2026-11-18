@@ -10,7 +10,7 @@ export const GET = handle(async () => {
   const u = await requireStudent();
   await connectDB();
   const s = await Student.findById(u.id).select("class section").lean();
-  const exams = await ExamNotice.find({ status: "published", class: s.class, section: { $in: ["", s.section || ""] } }).sort({ createdAt: -1 }).limit(30).select("-createdByName -batch").lean();
+  const exams = await ExamNotice.find({ status: "published", archived: { $ne: true }, class: s.class, section: { $in: ["", s.section || ""] } }).sort({ createdAt: -1 }).limit(30).select("-createdByName -batch").lean();
   const invs = await Invoice.find({ student: u.id, examNotice: { $in: exams.map((e) => e._id) }, status: "open" }).lean();
   const map = await netPaidMap(invs.map((i) => i._id));
   const pend = await PaymentSubmission.find({ student: u.id, invoice: { $in: invs.map((i) => i._id) }, status: "pending" }).select("invoice amount").lean();

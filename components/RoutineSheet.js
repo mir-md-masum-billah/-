@@ -27,7 +27,7 @@ export default function RoutineSheet({ items, mode, heading, filename, code }) {
             <tr key={d} style={{ breakInside: "avoid", height: 52 }}>
               <td style={{ ...td, fontWeight: 700, color: "#0A4435", background: "#F3F4F6" }}>{x(name)}</td>
               {slots.map((sl) => { const c = cell(d, sl); return (
-                <td key={sl.s + sl.e} style={td}>{c.length ? c.map((r) => <div key={r._id}><b>{x(r.subject)}</b><br /><span style={{ color: "#475569", fontSize: 10.5 }}>{mode === "teacher" ? `${x(r.class)}${r.section ? ` (${r.section})` : ""}` : r.teacher}</span></div>) : "—"}</td>
+                <td key={sl.s + sl.e} style={td}>{c.length ? c.map((r) => <div key={r._id}><b>{x(r.subject)}</b><br /><span style={{ color: "#475569", fontSize: 10.5 }}>{mode === "teacher" ? `${x(r.class)}${r.section ? ` (${r.section})` : ""}` : (typeof r.teacher === "object" ? r.teacher?.name : r.teacher) || ""}</span></div>) : "—"}</td>
               ); })}
             </tr>
           ))}</tbody>

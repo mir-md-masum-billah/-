@@ -1,4 +1,5 @@
 "use client";
+import { gradeOf, summarize } from "@/lib/grades";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton";
@@ -101,8 +102,8 @@ export default function StudentPortal() {
 
         {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">{t.noResults}</p>}
           {Object.entries(groups).map(([name, rows]) => { const got = rows.reduce((t, r) => t + r.marks, 0), full = rows.reduce((t, r) => t + r.full, 0); return (
-            <div key={name} className="card overflow-x-auto !p-0"><div className="flex items-center justify-between gap-2 pr-4"><Title>{name}</Title><button className="btn-primary !py-1.5 text-sm" onClick={() => printUrl(`/student/result?exam=${encodeURIComponent(rows[0].exam)}&year=${rows[0].year}`)}>{x("রেজাল্ট কার্ড প্রিন্ট")}</button></div><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
-              <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td></tr>)}<tr className="bg-gold-light/60 font-bold"><td className="td">{t.total}</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td></tr></tbody></table></div>); })}</>}
+            <div key={name} className="card overflow-x-auto !p-0"><div className="flex items-center justify-between gap-2 pr-4"><Title>{name}</Title><button className="btn-primary !py-1.5 text-sm" onClick={() => printUrl(`/student/result?exam=${encodeURIComponent(rows[0].exam)}&year=${rows[0].year}`)}>{x("রেজাল্ট কার্ড প্রিন্ট")}</button></div><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}<th className="th">{x("গ্রেড")}</th></tr></thead>
+              <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td><td className={`td font-bold ${gradeOf(r.marks, r.full).g === "F" ? "text-red-600" : "text-brand"}`}>{gradeOf(r.marks, r.full).g}</td></tr>)}<tr className="bg-gold-light/60 font-bold"><td className="td">{t.total}</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td><td className="td">{(() => { const sm = summarize(rows); return `${sm.letter} · GPA ${bn(sm.gpa.toFixed(2))}`; })()}</td></tr></tbody></table></div>); })}</>}
 
         {tab === "lv" && <>
           <form onSubmit={applyLeave} className="card grid gap-4 sm:grid-cols-2"><h2 className="font-display text-xl text-brand-dark sm:col-span-2">{t.newLeave}</h2>

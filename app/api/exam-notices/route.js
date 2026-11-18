@@ -11,7 +11,7 @@ export const GET = handle(async (req) => {
   const u = await requireUser("exams.manage");
   await connectDB();
   const sp = new URL(req.url).searchParams;
-  const f = {};
+  const f = sp.get("archived") === "1" ? { archived: true } : { archived: { $ne: true } };
   if (sp.get("class")) f.class = sp.get("class");
   const q = (sp.get("q") || "").trim().slice(0, 40);
   if (q) f.name = { $regex: esc(q), $options: "i" };
