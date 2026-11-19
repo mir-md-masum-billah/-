@@ -4,21 +4,24 @@ import useSettings from "@/hooks/useSettings";
 import { api, Toast } from "@/components/CrudPage";
 import { useLang } from "@/components/LangProvider";
 import Loader from "@/components/Loader";
+import useMe from "@/hooks/useMe";
 import { confirmBox } from "@/components/Dialog";
 
 export default function Promotion() {
-  const st = useSettings(); const { x, n } = useLang();
+  const st = useSettings(); const me = useMe(); const { x, n } = useLang();
+  const own = !!me && !me.perms.includes("students.promote"); // ক্লাস টিচার: শুধু নিজের শ্রেণি
+  const allowed = (st?.classes || []).map((c) => c.name).filter((c) => !own || (me.classTeacherOf || []).some((o) => o.class === c));
   const [f, setF] = useState({ fromClass: "", fromSection: "", toClass: "", toSection: "", session: "", graduate: false });
   const [list, setList] = useState([]); const [sel, setSel] = useState({}); const [msg, setMsg] = useState(""); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false); const [order, setOrder] = useState("name");
   const [perf, setPerf] = useState(false); const [exams, setExams] = useState([]); const [rankExam, setRankExam] = useState(""); const [ranked, setRanked] = useState(null); const [rBusy, setRBusy] = useState(false);
-  useEffect(() => { if (st && !f.fromClass) setF((x) => ({ ...x, fromClass: st.classes[0]?.name || "", session: st.currentSession || "" })); }, [st]); // eslint-disable-line
+  useEffect(() => { if (st && me && (!f.fromClass || !allowed.includes(f.fromClass))) setF((x) => ({ ...x, fromClass: allowed[0] || "", fromSection: "", session: st.currentSession || "" })); }, [st, me]); // eslint-disable-line
   useEffect(() => {
     if (!f.fromClass) return;
     api("GET", `/api/students?class=${encodeURIComponent(f.fromClass)}${f.fromSection ? "&section=" + encodeURIComponent(f.fromSection) : ""}&active=true&limit=500`).then((r) => { if (r.ok) { setList(r.d.items); setSel(Object.fromEntries(r.d.items.map((s) => [s._id, true]))); } });
   }, [f.fromClass, f.fromSection, msg]);
   // পারফরম্যান্স অনুযায়ী রোল: এই শ্রেণির পরীক্ষার তালিকা (যে পরীক্ষায় ফল আছে)
   useEffect(() => { setRanked(null); if (!perf || !f.fromClass) return; api("GET", `/api/results/exams?class=${encodeURIComponent(f.fromClass)}`).then((r) => { if (r.ok) { setExams(r.d.items); setRankExam((c) => (r.d.items.some((e) => `${e.name}|${e.year}` === c) ? c : r.d.items[0] ? `${r.d.items[0].name}|${r.d.items[0].year}` : "")); } }); }, [perf, f.fromClass, f.fromSection, msg]); // eslint-disable-line
-  if (!st) return <Loader compact label={x("লোড হচ্ছে...")} />;
+  if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   async function showRank() {
     setErr(""); setRBusy(true); const [exam, year] = rankExam.split("|");
     const r = await api("GET", `/api/students/promote/rank?class=${encodeURIComponent(f.fromClass)}${f.fromSection ? "&section=" + encodeURIComponent(f.fromSection) : ""}&exam=${encodeURIComponent(exam)}&year=${year}`); setRBusy(false);
@@ -43,7 +46,7 @@ export default function Promotion() {
       <h1 className="text-3xl text-brand-dark">{x("প্রমোশন ও রোল")}</h1>
       {err && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <div className="card space-y-4"><h2 className="font-bold">{x("শ্রেণি প্রমোশন")}</h2>
-        <div className="grid gap-3 sm:grid-cols-4"><div><label className="label">{x("বর্তমান শ্রেণি")}</label>{sel1("fromClass", st.classes.map((c) => c.name), "—")}</div><div><label className="label">{x("শাখা")}</label>{sel1("fromSection", secs(f.fromClass), "সব")}</div>
+        <div className="grid gap-3 sm:grid-cols-4"><div><label className="label">{x("বর্তমান শ্রেণি")}</label>{sel1("fromClass", allowed, "—")}</div><div><label className="label">{x("শাখা")}</label>{sel1("fromSection", secs(f.fromClass), "সব")}</div>
           {!f.graduate && <><div><label className="label">{x("নতুন শ্রেণি")}</label>{sel1("toClass", st.classes.map((c) => c.name), "— বাছাই —")}</div><div><label className="label">{x("নতুন শাখা")}</label>{sel1("toSection", secs(f.toClass), "—")}</div><div><label className="label">{x("নতুন সেশন")}</label><input className="input" value={f.session} onChange={(e) => setF({ ...f, session: e.target.value })} /></div></>}</div>
         <label className="flex items-center gap-2"><input type="checkbox" checked={f.graduate} onChange={(e) => setF({ ...f, graduate: e.target.checked })} /> {x("শেষ শ্রেণি — পাস করে বের হচ্ছে (প্রমোশন নয়)")}</label>
         {!f.graduate && <div className="space-y-3 rounded-xl border border-gold/50 bg-gold-light/30 p-4">

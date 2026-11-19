@@ -10,12 +10,13 @@ import LanguageSwitch from "./LanguageSwitch";
 import ThemeToggle from "./ThemeToggle";
 import { useLang } from "./LangProvider";
 import { roleLabel } from "@/lib/rbac";
+import PageTablePrint from "./PageTablePrint";
 
 const nav = [
   { href: "/admin", label: "ড্যাশবোর্ড", icon: "home" },
   { href: "/admin/students", label: "শিক্ষার্থী", icon: "cap", perm: "students.read" },
   { href: "/admin/applications", label: "ভর্তির আবেদন", icon: "inbox", perm: "applications.manage" },
-  { href: "/admin/promotion", label: "প্রমোশন ও রোল", icon: "promote", perm: "students.promote" },
+  { href: "/admin/promotion", label: "প্রমোশন ও রোল", icon: "promote", perm: ["students.promote", "promote.own"] },
   { href: "/admin/academics", label: "শ্রেণি-বিষয়-নিয়োগ", icon: "school", perm: "students.read" },
   { href: "/admin/class-dashboard", label: "ক্লাস ড্যাশবোর্ড", icon: "bars", perm: "students.read" },
   { href: "/admin/attendance", label: "হাজিরা", icon: "check", perm: "attendance.read" },
@@ -24,6 +25,7 @@ const nav = [
   { href: "/admin/leave", label: "ছুটি", icon: "calendar" },
   { href: "/admin/routine", label: "ক্লাস রুটিন", icon: "clock", perm: "routine.manage" },
   { href: "/admin/my-routine", label: "আমার রুটিন", icon: "calendar", role: "teacher" },
+  { href: "/admin/me", label: "আমার প্রোফাইল", icon: "users" },
   { href: "/admin/exams", label: "পরীক্ষার নোটিশ", icon: "clipboard", perm: "exams.manage" },
   { href: "/admin/results", label: "পরীক্ষার ফলাফল", icon: "file", perm: "results.read" },
   { href: "/admin/fees", label: "বেতন ও ফি", icon: "wallet", perm: "fees.read" },
@@ -45,7 +47,7 @@ export default function AdminShell({ session, schoolName, children }) {
     let dead = false; const load = () => fetch("/api/pending").then((r) => (r.ok ? r.json() : {})).then((j) => { if (!dead) setPending(j || {}); }).catch(() => {});
     load(); const t = setInterval(load, 60000); return () => { dead = true; clearInterval(t); };
   }, [path]);
-  const items = nav.filter((n) => (!n.perm || session.perms.includes(n.perm)) && (!n.role || (n.role === "teacher" ? ["teacher", "headmaster", "admin", "superadmin"].includes(session.role) : session.role === n.role)));
+  const items = nav.filter((n) => (!n.perm || [].concat(n.perm).some((p) => session.perms.includes(p))) && (!n.role || (n.role === "teacher" ? ["teacher", "headmaster", "admin", "superadmin"].includes(session.role) : session.role === n.role)));
   return (
     <div className="min-h-screen lg:flex print:block">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-gold/25 bg-night px-4 py-3 text-white lg:hidden print:hidden">
@@ -82,7 +84,7 @@ export default function AdminShell({ session, schoolName, children }) {
           <LogoutButton className="btn w-full justify-start !px-3 !py-2 text-sm text-white/70 hover:bg-white/[0.05] hover:text-white" />
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 sm:p-8 print:p-0"><div className="mx-auto max-w-7xl print:max-w-none">{children}</div></main>
+      <main className="min-w-0 flex-1 p-4 sm:p-8 print:p-0"><div className="mx-auto max-w-7xl print:max-w-none">{children}<PageTablePrint /></div></main>
     </div>
   );
 }

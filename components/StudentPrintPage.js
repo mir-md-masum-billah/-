@@ -18,7 +18,7 @@ export default function StudentPrintPage({ admin = false, id }) {
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
     const legacy = sp.get("mode") === "pay" ? ["pay"] : null;
-    const parts = (sp.get("parts") ? sp.get("parts").split(",") : legacy || ["profile"]).filter((p) => ["profile", "pay", "results"].includes(p));
+    const parts = (sp.get("parts") ? sp.get("parts").split(",") : legacy || ["profile"]).filter((p) => ["profile", "pay", "fees", "results"].includes(p));
     const qq = { parts, year: sp.get("year") || "", exam: sp.get("exam") || "" }; setQ(qq);
     (async () => {
       let base;
@@ -40,12 +40,13 @@ export default function StudentPrintPage({ admin = false, id }) {
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
   if (!d || !q) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const s = d.student, payments = d.payments || [];
-  const names = { profile: L("প্রোফাইল", "Profile"), pay: L("পেমেন্ট ইতিহাস", "Payment History"), results: q.exam ? `${L("রেজাল্ট কার্ড", "Result Card")} ${q.exam} ${q.year}` : q.year ? `${L("সব রেজাল্ট", "All Results")} ${q.year}` : L("সব রেজাল্ট", "All Results") };
-  const title = docName([studentTag(s, { x, n, lang }), q.parts.length === 3 ? L("সম্পূর্ণ তথ্য (প্রোফাইল, পেমেন্ট ও ফলাফল)", "Complete record") : q.parts.map((p) => names[p]).join(" + ")]);
+  const names = { profile: L("প্রোফাইল", "Profile"), pay: L("পেমেন্ট ইতিহাস", "Payment History"), fees: L("ফি বিবরণী", "Fee Statement"), results: q.exam ? `${L("রেজাল্ট কার্ড", "Result Card")} ${q.exam} ${q.year}` : q.year ? `${L("সব রেজাল্ট", "All Results")} ${q.year}` : L("সব রেজাল্ট", "All Results") };
+  const title = docName([studentTag(s, { x, n, lang }), q.parts.length >= 3 ? L("সম্পূর্ণ তথ্য (প্রোফাইল, পেমেন্ট ও ফলাফল)", "Complete record") : q.parts.map((p) => names[p]).join(" + ")]);
   return (
     <div className={admin ? "" : "min-h-screen bg-pearl p-3 sm:p-6 print:min-h-0 print:bg-white print:p-0"}>
       <DocBundle docTitle={title} back={back}>
         {q.parts.includes("profile") && <StudentProfileDoc multi student={s} subjects={d.subjects} mode="profile" />}
+        {q.parts.includes("fees") && <StudentProfileDoc multi student={s} payments={payments} invoices={d.invoices || []} due={d.due} mode="fees" />}
         {q.parts.includes("pay") && <StudentProfileDoc multi student={s} payments={payments} due={d.due} mode="pay" />}
         {q.parts.includes("results") && (cards.length ? cards.map((c) => <ResultCardDoc multi key={`${c.exam}-${c.year}`} data={c} />) : <p className="no-print mx-auto max-w-[840px] rounded-lg bg-amber-50 p-4 text-amber-900">{x("এই শিক্ষার্থীর কোনো ফলাফল পাওয়া যায়নি")}</p>)}
       </DocBundle>

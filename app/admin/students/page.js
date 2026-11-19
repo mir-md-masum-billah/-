@@ -10,19 +10,20 @@ import StudentListPrint from "@/components/StudentListPrint";
 
 export default function Page() {
   const st = useSettings(); const me = useMe(); const { x, money } = useLang();
-  const [cls, setCls] = useState(""); const [pr, setPr] = useState(false);
+  const [cls, setCls] = useState(""); const [pr, setPr] = useState(false); const [arch, setArch] = useState(false); const [rv, setRv] = useState(0);
   if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const classOpts = st.classes.map((c) => c.name);
   const chip = (on) => `shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold ${on ? "border-brand bg-brand text-white" : "border-slate-300 bg-white text-slate-700"}`;
   return (
     <div>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist"><button className={chip(!cls)} onClick={() => setCls("")}>{x("সব শিক্ষার্থী")}</button>{classOpts.map((c) => <button key={c} className={chip(cls === c)} onClick={() => setCls(c)}>{x(c)}</button>)}</div>
+      <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist"><button className={chip(!cls)} onClick={() => setCls("")}>{x("সব শিক্ষার্থী")}</button>{classOpts.map((c) => <button key={c} className={chip(cls === c)} onClick={() => setCls(c)}>{x(c)}</button>)}<button className={`${chip(arch)} ml-auto`} onClick={() => setArch(!arch)}>{arch ? x("← সক্রিয় তালিকা") : x("আর্কাইভ তালিকা")}</button></div>
+      {arch && <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{x("আর্কাইভ করা শিক্ষার্থীরা এখানে আছে। \"ফিরিয়ে আনুন\" চাপলে আবার সক্রিয় হবে ও লগইন চালু হবে।")}</p>}
     <CrudPage
       prefill={async () => { const r = await fetch("/api/next-id?kind=student"); const j = await r.json(); return j.id ? { studentId: j.id } : {}; }}
-      key={cls} query={cls ? `&class=${encodeURIComponent(cls)}` : ""}
-      resource="students" title="শিক্ষার্থী" addLabel="নতুন ভর্তি" canWrite={me.perms.includes("students.write")}
-      toolbar={<><button className="btn-ghost !py-2" onClick={() => setPr(true)}>{x("তালিকা প্রিন্ট")}</button>{me.perms.includes("students.promote") && <Link href="/admin/promotion" className="btn-ghost !py-2">{x("প্রমোশন")}</Link>}{me.perms.includes("students.write") && <Link href="/admin/students/import" className="btn-ghost !py-2">{x("আমদানি")}</Link>}<a href="/api/students/export" className="btn-ghost !py-2">{x("এক্সপোর্ট CSV")}</a></>}
-      rowActions={(r) => <Link href={`/admin/students/${r._id}`} className="mr-3 font-semibold text-slate-700">{x("প্রোফাইল")}</Link>}
+      key={`${cls}|${arch}|${rv}`} query={`${cls ? `&class=${encodeURIComponent(cls)}` : ""}${arch ? "&archived=true" : ""}`}
+      resource="students" title={arch ? "আর্কাইভ করা শিক্ষার্থী" : "শিক্ষার্থী"} addLabel="নতুন ভর্তি" canWrite={me.perms.includes("students.write") && !arch}
+      toolbar={<><button className="btn-ghost !py-2" onClick={() => setPr(true)}>{x("বিস্তারিত তালিকা প্রিন্ট")}</button>{me.perms.includes("students.promote") && <Link href="/admin/promotion" className="btn-ghost !py-2">{x("প্রমোশন")}</Link>}{me.perms.includes("students.write") && <Link href="/admin/students/import" className="btn-ghost !py-2">{x("আমদানি")}</Link>}<a href="/api/students/export" className="btn-ghost !py-2">{x("এক্সপোর্ট CSV")}</a></>}
+      rowActions={(r) => <><Link href={`/admin/students/${r._id}`} className="mr-3 font-semibold text-slate-700">{x("প্রোফাইল")}</Link>{arch && me.perms.includes("students.write") && <button className="mr-3 font-semibold text-brand underline" onClick={async () => { const res = await fetch(`/api/students/${r._id}/restore`, { method: "POST" }); const j = await res.json().catch(() => ({})); if (!res.ok) return alert(j.error || x("সমস্যা হয়েছে")); setRv((v) => v + 1); }}>{x("ফিরিয়ে আনুন")}</button>}</>}
       deleteLabel="আর্কাইভ" deleteConfirm="শিক্ষার্থীকে আর্কাইভ করবেন? লগইন বন্ধ হবে, কিন্তু হাজিরা-ফি-ফলাফলের ইতিহাস থাকবে।"
       defaults={{ active: "true", session: st.currentSession || "", class: cls }}
       columns={[

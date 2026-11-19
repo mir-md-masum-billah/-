@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/guard";
 import { Student, StudentHistory, Invoice, Payment } from "@/lib/models";
 import { handle, json, isId, HttpError } from "@/lib/http";
 import { visibleScopes, inScope } from "@/lib/assign";
-import { netPaidMap, obligation, round2 } from "@/lib/finance";
+import { netPaidMap, obligation, round2, withBalance } from "@/lib/finance";
 
 export const GET = handle(async (_req, { params }) => {
   const user = await requireUser("students.read");
@@ -19,6 +19,7 @@ export const GET = handle(async (_req, { params }) => {
     const inv = await Invoice.find({ student: id, status: "open" }).lean();
     const map = await netPaidMap(inv.map((i) => i._id));
     out.payments = await Payment.find({ student: id, voided: { $ne: true } }).sort({ date: -1 }).populate("invoice", "title period invoiceNo").lean();
+    out.invoices = (await Invoice.find({ student: id, status: "open" }).sort({ year: 1, month: 1, createdAt: 1 }).lean()).map((i) => withBalance(i, map[String(i._id)] || 0)); // ফি বিবরণীর জন্য: প্রতিটি ইনভয়েসের ধার্য, জমা, বকেয়া
     out.due = round2(inv.reduce((t, i) => t + Math.max(0, obligation(i) - (map[String(i._id)] || 0)), 0));
   }
   return json(out);

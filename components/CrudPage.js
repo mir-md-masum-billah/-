@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { useLang } from "./LangProvider";
 import Loader from "@/components/Loader";
 import { confirmBox } from "@/components/Dialog";
+import { printList, textOf } from "@/lib/listprint";
 
 export async function api(method, url, body) {
   try {
@@ -35,7 +36,7 @@ export function Toast({ msg }) {
 }
 
 // ব্যবহার: <CrudPage resource title columns fields defaults query canWrite deleteLabel />
-export default function CrudPage({ resource, title, columns, fields, defaults = {}, query = "", addLabel = "নতুন যোগ করুন", canWrite = true, rowActions, deleteLabel = "মুছুন", deleteConfirm = "সত্যিই মুছে ফেলবেন?", toolbar, prefill }) {
+export default function CrudPage({ resource, title, columns, fields, defaults = {}, query = "", addLabel = "নতুন যোগ করুন", canWrite = true, rowActions, deleteLabel = "মুছুন", deleteConfirm = "সত্যিই মুছে ফেলবেন?", toolbar, prefill, noPrint = false }) {
   const { x } = useLang();
   const [data, setData] = useState({ items: [], total: 0, pages: 1 });
   const [page, setPage] = useState(1);
@@ -83,27 +84,36 @@ export default function CrudPage({ resource, title, columns, fields, defaults = 
     catch { setErr(x("আপলোড ব্যর্থ — নেটওয়ার্ক সমস্যা")); }
     setBusy(false);
   }
+  // এই পেজের পুরো তালিকা (খোঁজ/ফিল্টার সহ, সব পাতা) A4 তে প্রিন্ট — যেকোনো তালিকায় একই বাটন
+  const [printing, setPrinting] = useState(false);
+  async function printAll() {
+    setPrinting(true); const r = await api("GET", `/api/${resource}?page=1&limit=1000&q=${encodeURIComponent(dq)}${query}`); setPrinting(false);
+    if (!r.ok) return flash(r.d.error || x("তথ্য আনা যায়নি"));
+    const cols = columns.filter((c) => c.label !== "ছবি");
+    printList({ title: x(title), head: cols.map((c) => x(c.label)), rows: r.d.items.map((it) => cols.map((c) => { const v = c.render ? textOf(c.render(it)) : it[c.key]; return v === undefined || v === null || v === "" ? "—" : String(v); })), total: r.d.total });
+  }
   const opts = (f) => (typeof f.options === "function" ? f.options(form) : f.options) || [];
 
   return (
-    <div>
+    <div data-crud="1">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-3xl text-brand-dark">{x(title)}</h1>
         {toolbar}
+        {noPrint ? null : <button className="btn-ghost !py-2 print:hidden" onClick={printAll} disabled={printing}>{printing ? x("অপেক্ষা করুন...") : x("তালিকা প্রিন্ট")}</button>}
         <div className="relative"><Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input className="input !w-44 !pl-9 sm:!w-60" placeholder={x("খুঁজুন...")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={x("খুঁজুন")} /></div>
         {canWrite && <button className="btn-primary" onClick={openNew}><span aria-hidden="true" className="text-lg leading-none">+</span> {x(addLabel)}</button>}
       </div>
       {loadErr && <p className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{loadErr} <button className="underline" onClick={load}>{x("আবার চেষ্টা")}</button></p>}
       <div className={`card overflow-x-auto !p-0 ${loading ? "opacity-60" : ""}`}>
         <table className="w-full min-w-[560px]">
-          <thead><tr>{columns.map((c) => <th key={c.label} className="th">{x(c.label)}</th>)}{canWrite && <th className="th" />}</tr></thead>
+          <thead><tr>{columns.map((c) => <th key={c.label} className="th">{x(c.label)}</th>)}{(canWrite || rowActions) && <th className="th" />}</tr></thead>
           <tbody>
             {data.items.map((r) => (
               <tr key={r._id} className="transition-colors hover:bg-gold-light/40">
                 {columns.map((c) => <td key={c.label} className="td">{c.render ? c.render(r) : (r[c.key] ?? "—")}</td>)}
-                {canWrite && <td className="td whitespace-nowrap text-right">
-                  {rowActions?.(r)}<button className="mr-4 font-semibold text-brand hover:underline" onClick={() => openEdit(r)}>{x("এডিট")}</button>
-                  <button className="font-semibold text-red-600 hover:underline" onClick={() => remove(r)}>{x(deleteLabel)}</button>
+                {(canWrite || rowActions) && <td className="td whitespace-nowrap text-right">
+                  {rowActions?.(r)}{canWrite && <><button className="mr-4 font-semibold text-brand hover:underline" onClick={() => openEdit(r)}>{x("এডিট")}</button>
+                  <button className="font-semibold text-red-600 hover:underline" onClick={() => remove(r)}>{x(deleteLabel)}</button></>}
                 </td>}
               </tr>
             ))}

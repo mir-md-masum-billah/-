@@ -4,6 +4,7 @@ import { RoutineSlot } from "@/lib/models";
 import { handle, json, ok, HttpError, isId } from "@/lib/http";
 import { validateSlot } from "@/lib/routine";
 import { audit } from "@/lib/audit";
+import { safeSync } from "@/lib/routine-sync";
 
 // অ্যাডমিন (routine.manage) সব দেখে; শিক্ষক শুধু নিজের রুটিন
 export const GET = handle(async (req) => {
@@ -29,5 +30,6 @@ export const POST = handle(async (req) => {
   const d = await validateSlot(await req.json());
   const doc = await RoutineSlot.create(d);
   await audit(user, "create", "routine", doc._id, { class: d.class, section: d.section, subject: d.subject, day: d.day, time: `${d.startTime}-${d.endTime}`, teacher: String(d.teacher) });
+  await safeSync(d.class, d.section); // প্রথম ক্লাসের স্যার = ক্লাস টিচার, বাকিরা বিষয় শিক্ষক
   return ok({ id: doc._id });
 });

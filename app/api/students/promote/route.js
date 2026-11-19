@@ -1,5 +1,5 @@
 import { connectDB, withTx } from "@/lib/db";
-import { requireUser } from "@/lib/guard";
+import { requireUser, assertPromote } from "@/lib/guard";
 import { Student, StudentHistory } from "@/lib/models";
 import { handle, ok, bad, isId, str } from "@/lib/http";
 import { getSettings } from "@/lib/settings";
@@ -11,9 +11,10 @@ import { isFinal } from "@/lib/results";
 // শ্রেণি প্রমোশন / পাস করে বের হওয়া — ইতিহাস সহ, একসাথে সফল বা কিছুই না (ট্রানজ্যাকশন)
 // rankBy = { exam, year } দিলে নতুন রোল পারফরম্যান্স অনুযায়ী বসে (সর্বোচ্চ স্কোর = রোল ১); র‍্যাংক সার্ভারেই হিসাব হয়, ক্লায়েন্টের ক্রম বিশ্বাস করা হয় না। চূড়ান্ত ফল প্রকাশের পরেই চলে।
 export const POST = handle(async (req) => {
-  const user = await requireUser("students.promote");
+  const user = await requireUser();
   await connectDB();
   const b = await req.json();
+  assertPromote(user, str(b.fromClass, 60), str(b.fromSection, 60));
   const st = await getSettings();
   const fromClass = str(b.fromClass, 60), fromSection = str(b.fromSection, 60), fromSession = str(b.fromSession, 40), toClass = str(b.toClass, 60);
   const from = st.classes.find((c) => c.name === fromClass);
