@@ -8,6 +8,7 @@ import { months } from "@/lib/school";
 import { toCSV, download } from "@/lib/csv";
 import { useLang } from "@/components/LangProvider";
 import Loader from "@/components/Loader";
+import { printUrl } from "@/lib/print";
 
 export default function Report() {
   const st = useSettings(); const me = useMe(); const { x, n, date: fmtDate } = useLang();
@@ -35,7 +36,7 @@ export default function Report() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3 print:hidden"><h1 className="mr-auto text-3xl text-brand-dark">{x("হাজিরা রিপোর্ট")}</h1>
-        {type !== "absent" && rows.length > 0 && <button className="btn-ghost" onClick={exportCsv}>CSV</button>}<button className="btn-ghost" onClick={() => window.print()}>{x("প্রিন্ট")}</button></div>
+        {type !== "absent" && rows.length > 0 && <button className="btn-ghost" onClick={exportCsv}>CSV</button>}<button className="btn-ghost" onClick={() => printUrl(`/admin/attendance/report/print?type=${type}&cls=${encodeURIComponent(cls)}&section=${encodeURIComponent(section)}&mode=${mode}&month=${month}&year=${year}&date=${date}`)}>{x("প্রিন্ট")}</button></div>
       <div className="mb-4 flex gap-2 border-b print:hidden">{tabs.map(([k, l]) => <button key={k} onClick={() => { setType(k); setD(null); }} className={`px-4 py-2 font-semibold ${type === k ? "border-b-4 border-gold text-brand" : "text-slate-600"}`}>{l}</button>)}</div>
       <div className="mb-4 flex flex-wrap gap-3 print:hidden">
         {type !== "staff" && <select className="input !w-auto" value={cls} onChange={(e) => { setCls(e.target.value); setSection(""); }} aria-label={x("শ্রেণি")}>{st.classes.map((c) => <option key={c.name} value={c.name}>{x(c.name)}</option>)}</select>}

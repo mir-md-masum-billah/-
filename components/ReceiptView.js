@@ -5,11 +5,12 @@ import A4Doc, { Field } from "./A4Doc";
 import { methodLabel } from "@/lib/school";
 import { useLang } from "@/components/LangProvider";
 import Loader from "@/components/Loader";
+import { docName, studentTag } from "@/lib/docname";
 
 const Stamp = ({ text, color }) => <div style={{ position: "absolute", right: "14mm", top: "112mm", transform: "rotate(-14deg)", border: `3px solid ${color}`, color, padding: "2px 18px", fontSize: 26, fontWeight: 800, opacity: 0.75, borderRadius: 6 }}>{text}</div>;
 
 // অ্যাডমিন, শিক্ষক ও শিক্ষার্থী — সবার ইনভয়েস এই একটি কম্পোনেন্ট থেকে আসে।
-// ইনভয়েসের ভাষা = ব্যবহারকারীর বেছে নেওয়া ভাষা (বাংলা হলে বাংলায়, English হলে ইংরেজিতে ছাপা হয়)। শুধু "পরিশোধিত" স্ট্যাম্প সবসময় বাংলায়।
+// ইনভয়েসের ভাষা = ব্যবহারকারীর বেছে নেওয়া ভাষা (বাংলা হলে বাংলায়, English হলে ইংরেজিতে ছাপা হয়) — স্ট্যাম্পও।
 export default function ReceiptView({ id }) {
   const { x, n, money, date, lang } = useLang();
   const L = (bn, en) => (lang === "en" ? en : bn);
@@ -22,9 +23,9 @@ export default function ReceiptView({ id }) {
   const th = { textAlign: "left", background: "#E8F1EC", color: "#0A4435", padding: "6px 8px", fontSize: 11, border: "1px solid #94a3b8" };
   const td = { padding: "7px 8px", border: "1px solid #cbd5e1" };
   return (
-    <A4Doc title={refund ? L("রিফান্ড ভাউচার", "Refund Voucher") : L("পেমেন্ট ইনভয়েস", "Payment Invoice")} filename={`invoice-${p.receiptNo}`} code={p.receiptNo}>
+    <A4Doc title={refund ? L("রিফান্ড ভাউচার", "Refund Voucher") : L("পেমেন্ট ইনভয়েস", "Payment Invoice")} docTitle={docName([studentTag(s, { x, n, lang }), refund ? L("রিফান্ড ভাউচার", "Refund Voucher") : L("পেমেন্ট ইনভয়েস", "Payment Invoice"), p.receiptNo])} code={p.receiptNo}>
       {p.voided && <Stamp text={L("বাতিল", "VOID")} color="#b91c1c" />}
-      {!p.voided && !refund && <Stamp text="পরিশোধিত" color="#0A4435" />}
+      {!p.voided && !refund && <Stamp text={L("পরিশোধিত", "PAID")} color="#0A4435" />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
         <div><p style={{ fontSize: 10, color: "#64748b" }}>{L("ইনভয়েস নং", "Invoice No")}</p><p style={{ fontSize: 20, fontWeight: 700, color: "#0A4435", letterSpacing: ".04em" }}>{p.receiptNo}</p></div>
         <div style={{ textAlign: "right" }}><p style={{ fontSize: 10, color: "#64748b" }}>{L("তারিখ", "Date")}</p><p style={{ fontWeight: 700 }}>{date(p.date)}</p>

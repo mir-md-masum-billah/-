@@ -182,7 +182,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <ContactStrip contacts={contacts.map((c) => ({ name: c.name, role: c.role, phone: c.phone }))} title={lang === "en" ? "Contact numbers" : "যোগাযোগের ফোন নম্বর"} />
+      <ContactStrip contacts={contacts.map((c) => ({ name: c.name, role: c.role, phone: c.phone, photo: c.photo }))} title={lang === "en" ? "Contact numbers" : "যোগাযোগের ফোন নম্বর"} />
 
       {/* ───── ভর্তির আহ্বান ───── */}
       <section className="border-y border-gold/40 bg-gold-light">

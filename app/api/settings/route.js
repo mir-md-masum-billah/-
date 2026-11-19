@@ -44,7 +44,7 @@ export const PUT = handle(async (req) => {
   if (b.contacts !== undefined) {
     if (!Array.isArray(b.contacts) || b.contacts.length > 40) throw bad("ফোন নম্বরের তালিকা সঠিক নয় (সর্বোচ্চ ৪০টি)");
     // সম্পূর্ণ ফাঁকা সারি বাদ; ফোন নম্বর আবশ্যক, নাম বা পদ — অন্তত একটি। বাংলা/ইংরেজি দুই অঙ্কেই চলে
-    upd.contacts = b.contacts.map((c) => ({ name: String(c?.name || "").trim().slice(0, 80), role: String(c?.role || "").trim().slice(0, 80), phone: String(c?.phone || "").trim().slice(0, 30) })).filter((c) => c.name || c.role || c.phone).map((c, i) => {
+    upd.contacts = b.contacts.map((c) => ({ name: String(c?.name || "").trim().slice(0, 80), role: String(c?.role || "").trim().slice(0, 80), phone: String(c?.phone || "").trim().slice(0, 30), photo: /^https?:\/\/\S+$/i.test(String(c?.photo || "").trim()) ? String(c.photo).trim().slice(0, 500) : "" })).filter((c) => c.name || c.role || c.phone).map((c, i) => {
       if (!c.phone || !validPhone(c.phone)) throw bad(`${i + 1} নম্বর সারিতে সঠিক ফোন নম্বর দিন (শুধু অঙ্ক, + ও - চলবে)`);
       if (!c.name && !c.role) throw bad(`${i + 1} নম্বর সারিতে নাম বা পদবী দিন`);
       return c;

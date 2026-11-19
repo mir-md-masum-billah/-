@@ -15,7 +15,7 @@ export const GET = handle(async (_req, { params }) => {
   if (!inScope(await visibleScopes(user), s.class, s.section)) throw new HttpError(403, "এই শিক্ষার্থীর তথ্য দেখার অনুমতি নেই");
   delete s.password;
   const out = { student: s, history: await StudentHistory.find({ student: id }).sort({ createdAt: -1 }).lean() };
-  if (user.perms.includes("fees.read")) {
+  { // শিক্ষক ও অ্যাডমিন — যে শিক্ষার্থী দেখতে পারেন তার পেমেন্ট ইতিহাসও প্রিন্ট করতে পারবেন (শ্রেণির অনুমতির সীমার ভেতরে)
     const inv = await Invoice.find({ student: id, status: "open" }).lean();
     const map = await netPaidMap(inv.map((i) => i._id));
     out.payments = await Payment.find({ student: id, voided: { $ne: true } }).sort({ date: -1 }).populate("invoice", "title period invoiceNo").lean();

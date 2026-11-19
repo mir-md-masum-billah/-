@@ -15,7 +15,7 @@ export default function RoutineSheet({ items, mode, heading, filename, code }) {
   const days = DAYS.map((name, d) => ({ d, name })).filter(({ d }) => items.some((i) => i.day === d));
   const cell = (d, sl) => items.filter((i) => i.day === d && i.startTime === sl.s && i.endTime === sl.e);
   return (
-    <A4Doc title={x("সাপ্তাহিক ক্লাস রুটিন")} filename={filename} code={code}>
+    <A4Doc title={x("সাপ্তাহিক ক্লাস রুটিন")} docTitle={[x("সাপ্তাহিক ক্লাস রুটিন"), heading].filter(Boolean).join(" - ")} code={code}>
       <p style={{ textAlign: "center", fontSize: 15, fontWeight: 700, color: "#0A4435", marginBottom: 12 }}>{heading}</p>
       {items.length === 0 ? <p style={{ textAlign: "center", color: "#64748b" }}>{x("এখনও কোনো ক্লাস নির্ধারিত হয়নি")}</p> : (
         <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>

@@ -17,6 +17,7 @@ import { printUrl } from "@/lib/print";
 import StudentPay from "@/components/StudentPay";
 import StudentExams from "@/components/StudentExams";
 import RoutineSheet from "@/components/RoutineSheet";
+import PrintChooser from "@/components/PrintChooser";
 
 const Title = ({ children }) => <h2 className="border-b border-gold/40 px-4 pb-2 pt-4 font-display text-xl text-brand-dark">{children}</h2>;
 
@@ -25,7 +26,7 @@ export default function StudentPortal() {
   const bn = (n) => num(n, lang), money = (n) => moneyL(n, lang), bnDate = (s) => dateL(s, lang), mo = (i) => monthName(i, lang);
   const label = t.status, methodLabel = t.methods;
   const { x } = useLang(); const tabs = [...Object.entries(t.tabs), ["exam", x("পরীক্ষা")], ["rt", x("ক্লাস রুটিন")]];
-  const [preInv, setPreInv] = useState(null); const [routine, setRoutine] = useState(null); const [rk, setRk] = useState(0);
+  const [chooser, setChooser] = useState(null); const [preInv, setPreInv] = useState(null); const [routine, setRoutine] = useState(null); const [rk, setRk] = useState(0);
   const schoolName = lang === "en" ? schoolEn.name : school.name;
   const [leaves, setLeaves] = useState(null); const [lf, setLf] = useState({}); const [lErr, setLErr] = useState(""); const [lBusy, setLBusy] = useState(false); const [d, setD] = useState(null); const [err, setErr] = useState(""); const [tab, setTab] = useState("home");
   const load = () => { setErr(""); fetch("/api/student/me").then(async (r) => { if (r.status === 401) { location.href = "/login"; return; } const j = await r.json(); r.ok ? setD(j) : setErr(j.error || t.errLoad); }).catch(() => setErr(t.errNet)); };
@@ -59,7 +60,7 @@ export default function StudentPortal() {
       <nav className="sticky top-0 z-10 border-b border-gold/30 bg-white/95 backdrop-blur print:hidden" aria-label={t.portalMenu}><div className="mx-auto flex max-w-4xl overflow-x-auto px-2">{tabs.map(([k, l]) => <button key={k} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={`whitespace-nowrap border-b-[3px] px-4 py-3.5 font-semibold transition ${tab === k ? "border-gold text-brand-dark" : "border-transparent text-slate-500 hover:text-brand"}`}>{l}</button>)}</div></nav>
       <main className="mx-auto max-w-4xl space-y-5 p-4 sm:py-8 print:max-w-none print:space-y-0 print:p-0">
         {tab === "home" && <>
-          <div className="flex flex-wrap gap-2 print:hidden"><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print")}>{x("আমার প্রোফাইল প্রিন্ট")}</button><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print?mode=pay")}>{x("পেমেন্ট ইতিহাস প্রিন্ট")}</button><PasswordDialog className="btn-ghost !py-2" /></div>
+          <div className="flex flex-wrap gap-2 print:hidden"><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print?parts=profile")}>{x("আমার প্রোফাইল প্রিন্ট")}</button><button className="btn-ghost !py-2" onClick={() => printUrl("/student/print?parts=pay")}>{x("পেমেন্ট ইতিহাস প্রিন্ট")}</button><button className="btn-ghost !py-2" onClick={() => setChooser({ results: true })}>{x("ফলাফল প্রিন্ট")}</button><button className="btn-primary !py-2" onClick={() => setChooser({ profile: true, pay: true, results: true })}>{x("একসাথে প্রিন্ট")}</button><PasswordDialog className="btn-ghost !py-2" /></div>
           <div className="lattice flex items-center gap-5 overflow-hidden rounded-2xl bg-night p-5 text-white shadow-gilt sm:gap-7 sm:p-7">
             <div className="shrink-0 rounded-t-full border border-gold-soft/70 p-1">
               {s.photo ? <img src={s.photo} alt="" className="h-28 w-24 rounded-t-full object-cover sm:h-32 sm:w-28" /> : <div className="grid h-28 w-24 place-items-center rounded-t-full bg-brand font-display text-4xl text-gold-soft sm:h-32 sm:w-28">{s.name[0]}</div>}
@@ -101,6 +102,7 @@ export default function StudentPortal() {
         {tab === "rt" && (routine ? <RoutineSheet items={routine.items} mode="student" heading={`${routine.class}${routine.section ? ` (${routine.section})` : ""} — ${s.name}`} filename={`routine-${s.studentId}`} /> : <Loader compact label={t.loading} />)}
 
         {tab === "res" && <>{Object.keys(groups).length === 0 && <p className="card text-slate-500">{t.noResults}</p>}
+          {Object.keys(groups).length > 1 && <div className="flex flex-wrap gap-2 print:hidden"><button className="btn-primary !py-2" onClick={() => printUrl("/student/print?parts=results")}>{x("সব পরীক্ষার ফলাফল একসাথে প্রিন্ট")}</button><button className="btn-ghost !py-2" onClick={() => setChooser({ results: true })}>{x("বছর/পরীক্ষা বাছাই করে প্রিন্ট")}</button></div>}
           {Object.entries(groups).map(([name, rows]) => { const got = rows.reduce((t, r) => t + r.marks, 0), full = rows.reduce((t, r) => t + r.full, 0); return (
             <div key={name} className="card overflow-x-auto !p-0"><div className="flex items-center justify-between gap-2 pr-4"><Title>{name}</Title><button className="btn-primary !py-1.5 text-sm" onClick={() => printUrl(`/student/result?exam=${encodeURIComponent(rows[0].exam)}&year=${rows[0].year}`)}>{x("রেজাল্ট কার্ড প্রিন্ট")}</button></div><table className="w-full"><thead><tr>{t.resCols.map((h) => <th key={h} className="th">{h}</th>)}<th className="th">{x("গ্রেড")}</th></tr></thead>
               <tbody>{rows.map((r) => <tr key={r._id}><td className="td">{r.subject}</td><td className="td">{bn(r.marks)}</td><td className="td">{bn(r.full)}</td><td className={`td font-bold ${gradeOf(r.marks, r.full).g === "F" ? "text-red-600" : "text-brand"}`}>{gradeOf(r.marks, r.full).g}</td></tr>)}<tr className="bg-gold-light/60 font-bold"><td className="td">{t.total}</td><td className="td">{bn(got)}</td><td className="td">{bn(full)} ({bn(Math.round((got / full) * 100))}%)</td><td className="td">{(() => { const sm = summarize(rows); return `${sm.letter} · GPA ${bn(sm.gpa.toFixed(2))}`; })()}</td></tr></tbody></table></div>); })}</>}
@@ -118,6 +120,7 @@ export default function StudentPortal() {
 
         {tab === "not" && <>{notices.length === 0 && <p className="card text-slate-500">{t.noNotices}</p>}{notices.map((n) => <article key={n._id} className="card"><p className="text-xs text-slate-500">{bnDate(n.date)}</p><h2 className="text-lg font-bold text-brand-dark">{n.title}</h2>{n.body && <p className="mt-1 whitespace-pre-line text-slate-700">{n.body}</p>}{n.fileUrl && <a href={n.fileUrl} target="_blank" className="btn-ghost mt-3 !py-1.5 text-sm"><Icon name="file" className="h-4 w-4" /> {t.file}</a>}</article>)}</>}
       </main>
+      {chooser && <PrintChooser preset={chooser} onClose={() => setChooser(null)} />}
     </div>
   );
 }

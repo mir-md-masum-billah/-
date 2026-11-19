@@ -231,4 +231,6 @@ html { scrollbar-color: var(--sb-thumb) var(--sb-track); }
   .a4-scroll { overflow: visible !important; padding: 0 !important; }
   .a4-sheet { zoom: 1 !important; box-shadow: none !important; margin: 0 !important; width: 210mm !important; min-height: 296mm !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .a4-sheet tr, .a4-sheet .avoid-break { break-inside: avoid; }
+  .a4-wrap + .a4-wrap { break-before: page; }
+  .a4-sheet thead { display: table-header-group; }
 }

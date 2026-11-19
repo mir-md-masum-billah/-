@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "./LogoutButton";
@@ -17,6 +17,7 @@ const nav = [
   { href: "/admin/applications", label: "ভর্তির আবেদন", icon: "inbox", perm: "applications.manage" },
   { href: "/admin/promotion", label: "প্রমোশন ও রোল", icon: "promote", perm: "students.promote" },
   { href: "/admin/academics", label: "শ্রেণি-বিষয়-নিয়োগ", icon: "school", perm: "students.read" },
+  { href: "/admin/class-dashboard", label: "ক্লাস ড্যাশবোর্ড", icon: "bars", perm: "students.read" },
   { href: "/admin/attendance", label: "হাজিরা", icon: "check", perm: "attendance.read" },
   { href: "/admin/attendance/report", label: "হাজিরা রিপোর্ট", icon: "trend", perm: "attendance.read" },
   { href: "/admin/staff-attendance", label: "স্টাফ হাজিরা", icon: "clock", perm: "staffattendance.read" },
@@ -38,6 +39,12 @@ export default function AdminShell({ session, schoolName, children }) {
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const path = usePathname();
+  const [pending, setPending] = useState({});
+  // অপেক্ষমাণ অনুরোধের সংখ্যা: পেজ বদলালে ও প্রতি ৬০ সেকেন্ডে নতুন করে আনে
+  useEffect(() => {
+    let dead = false; const load = () => fetch("/api/pending").then((r) => (r.ok ? r.json() : {})).then((j) => { if (!dead) setPending(j || {}); }).catch(() => {});
+    load(); const t = setInterval(load, 60000); return () => { dead = true; clearInterval(t); };
+  }, [path]);
   const items = nav.filter((n) => (!n.perm || session.perms.includes(n.perm)) && (!n.role || (n.role === "teacher" ? ["teacher", "headmaster", "admin", "superadmin"].includes(session.role) : session.role === n.role)));
   return (
     <div className="min-h-screen lg:flex print:block">
@@ -63,6 +70,7 @@ export default function AdminShell({ session, schoolName, children }) {
                 className={`relative flex items-center gap-3 rounded-md px-3 py-2.5 text-[15px] font-medium transition ${on ? "bg-white/[0.08] text-gold-soft" : "text-white/75 hover:bg-white/[0.05] hover:text-white"}`}>
                 {on && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-gold" />}
                 <Icon name={n.icon} className="h-[18px] w-[18px] shrink-0" />{t.shell.nav[n.href] || n.label}
+                {pending[n.href] > 0 && <span aria-label={`${pending[n.href]} pending`} className="ml-auto grid min-w-[22px] place-items-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold leading-none text-white shadow">{pending[n.href] > 99 ? "99+" : pending[n.href]}</span>}
               </Link>
             );
           })}
