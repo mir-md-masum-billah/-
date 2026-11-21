@@ -17,5 +17,5 @@ export const GET = handle(async (req) => {
   const secs = [...new Set(students.map((s) => s.section || ""))];
   const finals = await Promise.all(secs.map((sc) => isFinal(exam, year, cls, sc)));
   const ranked = await rankStudents({ students, exam, year });
-  return json({ items: ranked.map((r) => ({ _id: r.student._id, name: r.student.name, studentId: r.student.studentId, roll: r.student.roll, section: r.student.section, hasFinal: r.hasFinal, passed: r.passed, finalPercent: r.finalPercent, gpa: r.gpa, avgPct: r.avgPct, examCount: r.examCount, attPct: r.attPct, score: r.score, rank: r.rank })), finalized: finals.every(Boolean), weights: WEIGHTS });
+  return json({ items: ranked.map((r) => ({ _id: r.student._id, name: r.student.name, studentId: r.student.studentId, roll: r.student.roll, section: r.student.section, hasFinal: r.hasFinal, passed: r.passed, finalPercent: r.finalPercent, gpa: r.gpa, letter: r.letter, avgPct: r.avgPct, examCount: r.examCount, attPct: r.attPct, score: r.score, rank: r.rank })), finalized: finals.every(Boolean), weights: WEIGHTS });
 });

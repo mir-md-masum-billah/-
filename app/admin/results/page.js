@@ -32,6 +32,7 @@ export default function Page() {
   const examKey = exams?.find((y) => y.name === exam && y.year === year) ? `${exam}|${year}` : "";
   const can = (p) => me?.perms.includes(p);
   const dirty = useMemo(() => Object.keys(vals).length, [vals]);
+  const pos = useMemo(() => { if (!sheet) return {}; const rs = sheet.students.map((s) => { const rows = []; for (const sub of subjects) { if (!s.subjects.includes(sub.name)) continue; const v = vals[`${s._id}|${sub.name}`]; if (v === undefined || v === "" || Number.isNaN(Number(v))) continue; rows.push({ marks: Number(v), full: sub.full }); } return rows.length ? { id: s._id, ...summarize(rows) } : null; }).filter(Boolean); rs.sort((a, b) => Number(b.passed) - Number(a.passed) || b.total - a.total || b.gpa - a.gpa); const o = {}; rs.forEach((r) => { o[r.id] = 1 + rs.findIndex((q) => q.passed === r.passed && q.total === r.total && q.gpa === r.gpa); }); return o; }, [sheet, vals, subjects]); // eslint-disable-line
   if (!st || !me) return <Loader compact label={x("লোড হচ্ছে...")} />;
   const secs = st.classes.find((c) => c.name === cls)?.sections || [];
   async function save() {
@@ -52,7 +53,6 @@ export default function Page() {
   }
   // সারির লাইভ মোট ও জিপিএ (লেখার সাথে সাথে হিসাব)
   // মেধাক্রম (উত্তীর্ণরা আগে, তারপর মোট নম্বর/জিপিএ; সমান হলে একই ক্রম) — লেখার সাথে সাথে হিসাব
-  const pos = useMemo(() => { if (!sheet) return {}; const rs = sheet.students.map((s) => { const rows = []; for (const sub of subjects) { if (!s.subjects.includes(sub.name)) continue; const v = vals[`${s._id}|${sub.name}`]; if (v === undefined || v === "" || Number.isNaN(Number(v))) continue; rows.push({ marks: Number(v), full: sub.full }); } return rows.length ? { id: s._id, ...summarize(rows) } : null; }).filter(Boolean); rs.sort((a, b) => Number(b.passed) - Number(a.passed) || b.total - a.total || b.gpa - a.gpa); const o = {}; rs.forEach((r) => { o[r.id] = 1 + rs.findIndex((q) => q.passed === r.passed && q.total === r.total && q.gpa === r.gpa); }); return o; }, [sheet, vals, subjects]); // eslint-disable-line
   const live = (s) => { const rows = []; for (const sub of subjects) { if (!s.subjects.includes(sub.name)) continue; const v = vals[`${s._id}|${sub.name}`]; if (v === undefined || v === "" || Number.isNaN(Number(v))) continue; rows.push({ marks: Number(v), full: sub.full }); } return rows.length ? summarize(rows) : null; };
   return (
     <div className="space-y-4">

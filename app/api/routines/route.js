@@ -14,7 +14,9 @@ export const GET = handle(async (req) => {
   await connectDB();
   const sp = new URL(req.url).searchParams;
   const f = {};
-  if (u.perms.includes("routine.manage")) {
+  // ?mine=1 = শুধু নিজের রুটিন ("আমার রুটিন") — অ্যাডমিন হলেও অন্যের ক্লাস আসবে না
+  if (sp.get("mine") === "1") { if (!["teacher", "headmaster", "admin", "superadmin"].includes(u.role)) throw new HttpError(403, "অনুমতি নেই"); f.teacher = u.id; }
+  else if (u.perms.includes("routine.manage")) {
     if (isId(sp.get("teacher") || "")) f.teacher = sp.get("teacher");
     if (sp.get("class")) f.class = sp.get("class");
     if (sp.get("section")) f.section = sp.get("section");

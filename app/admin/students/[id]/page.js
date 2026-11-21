@@ -9,6 +9,7 @@ import Loader from "@/components/Loader";
 import { printUrl } from "@/lib/print";
 import { confirmBox } from "@/components/Dialog";
 import PrintChooser from "@/components/PrintChooser";
+import AttendanceCalendar from "@/components/AttendanceCalendar";
 
 const T = { admission: "ভর্তি", promotion: "প্রমোশন", class_change: "শ্রেণি/রোল পরিবর্তন", transferred: "বদলি", expelled: "বহিষ্কার", passed: "পাস করে বের", dropped: "ঝরে পড়া", reactivated: "পুনরায় সক্রিয়" };
 const SL = { active: "সক্রিয়", transferred: "বদলি হয়েছে", expelled: "বহিষ্কৃত", passed: "পাস করেছে", dropped: "ঝরে পড়েছে" };
@@ -16,7 +17,7 @@ const SL = { active: "সক্রিয়", transferred: "বদলি হয�
 export default function Profile({ params }) {
   const { id } = use(params); const me = useMe(); const { x, n, money, date } = useLang();
   const [d, setD] = useState(null); const [err, setErr] = useState(""); const [toast, setToast] = useState(""); const [subs, setSubs] = useState([]);
-  const [results, setResults] = useState([]); const [chooser, setChooser] = useState(null);
+  const [cal, setCal] = useState(false); const [results, setResults] = useState([]); const [chooser, setChooser] = useState(null);
   const [modal, setModal] = useState(null); const [form, setForm] = useState({}); const [mErr, setMErr] = useState(""); const [busy, setBusy] = useState(false);
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 3000); };
   const load = useCallback(async () => { const r = await api("GET", `/api/students/${id}/profile`); if (r.ok) setD(r.d); else setErr(r.d.error || x("লোড করা যায়নি")); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,7 +49,7 @@ export default function Profile({ params }) {
         <div className="mr-auto"><h1 className="text-3xl text-brand-dark">{s.name}</h1><p className="text-slate-600">{x("আইডি")} {s.studentId} · {x("শ্রেণি")} {x(s.class)}{s.section ? ` (${s.section})` : ""} · {x("রোল")} {s.roll}{s.session ? ` · ${x("সেশন")} ${s.session}` : ""}</p>
           <p className="mt-1"><span className={`rounded px-2 py-0.5 text-sm ${s.status === "active" ? "bg-brand-light text-brand" : "bg-amber-100 text-amber-800"}`}>{x(SL[s.status || "active"])}</span>{s.leftReason && <span className="ml-2 text-sm text-slate-500">{s.leftDate && date(s.leftDate)} · {s.leftReason}</span>}</p></div>
         {d.due !== undefined && <div className="text-right"><p className="text-sm text-slate-500">{x("বকেয়া ফি")}</p><p className={`text-xl font-bold ${d.due > 0 ? "text-red-600" : "text-brand"}`}>{money(d.due)}</p></div>}
-        <div className="flex flex-wrap gap-2 print:hidden"><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=profile`)}>{x("প্রোফাইল প্রিন্ট")}</button><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=pay`)}>{x("পেমেন্ট ইতিহাস প্রিন্ট")}</button><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=fees`)}>{x("ফি বিবরণী প্রিন্ট")}</button><button className="btn-ghost" onClick={() => setChooser({ results: true })}>{x("ফলাফল প্রিন্ট")}</button><button className="btn-primary" onClick={() => setChooser({ profile: true, pay: true, fees: true, results: true })}>{x("একসাথে প্রিন্ট")}</button></div>
+        <div className="flex flex-wrap gap-2 print:hidden">{d.student.archived && <button className="btn-gold" onClick={async () => { if (!(await confirmBox(x("এই শিক্ষার্থীকে আর্কাইভ থেকে ফিরিয়ে আনবেন? আবার সক্রিয় হবে ও লগইন চালু হবে।")))) return; const r = await api("POST", `/api/students/${id}/restore`); if (!r.ok) return flash(r.d.error || x("সমস্যা হয়েছে")); flash("✅ " + x("ফিরিয়ে আনা হয়েছে")); load(); }}>{x("আর্কাইভ থেকে ফিরিয়ে আনুন")}</button>}<button className="btn-ghost" onClick={() => setCal(true)}>{x("হাজিরা ক্যালেন্ডার")}</button><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=profile`)}>{x("প্রোফাইল প্রিন্ট")}</button><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=pay`)}>{x("পেমেন্ট ইতিহাস প্রিন্ট")}</button><button className="btn-ghost" onClick={() => printUrl(`/admin/students/${id}/print?parts=fees`)}>{x("ফি বিবরণী প্রিন্ট")}</button><button className="btn-ghost" onClick={() => setChooser({ results: true })}>{x("ফলাফল প্রিন্ট")}</button><button className="btn-primary" onClick={() => setChooser({ profile: true, pay: true, fees: true, results: true })}>{x("একসাথে প্রিন্ট")}</button></div>
         {can("students.promote") && <div className="flex gap-2 print:hidden">
           {s.status === "active" ? <button className="btn-ghost" onClick={() => { setMErr(""); setForm({ type: "transferred" }); setModal("status"); }}>{x("বদলি / পাস / ঝরে পড়া")}</button>
             : <button className="btn-primary" onClick={() => act("POST", `/api/students/${id}/status`, { type: "reactivated" }, () => x("✅ পুনরায় সক্রিয়"))}>{x("পুনরায় সক্রিয় করুন")}</button>}</div>}
@@ -89,6 +90,7 @@ export default function Profile({ params }) {
         <div><label className="label">{x("কাগজের নাম (যেমন: জন্মনিবন্ধন)")}</label><input required className="input" onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div><label className="label">{x("ফাইল (JPG/PNG/PDF, ≤৪MB)")}</label><input required type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(e) => setForm({ ...form, file: e.target.files[0] })} /></div>
         {mErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mErr}</p>}<button className="btn-primary w-full" disabled={busy}>{busy ? x("আপলোড হচ্ছে...") : x("আপলোড")}</button></form></Modal>}
+      {cal && <AttendanceCalendar title={`${x("হাজিরা ক্যালেন্ডার")} — ${d.student.name}`} onClose={() => setCal(false)} loadMonth={async (ym) => { const [Y, M] = ym.split("-").map(Number); const last = new Date(Date.UTC(Y, M, 0)).getUTCDate(); const r = await api("GET", `/api/attendance?student=${id}&from=${ym}-01&to=${ym}-${String(last).padStart(2, "0")}&limit=100`); if (!r.ok) throw new Error(r.d.error); return r.d.items; }} />}
       {chooser && <PrintChooser id={id} admin preset={chooser} onClose={() => setChooser(null)} />}
       <Toast msg={toast} />
     </div>

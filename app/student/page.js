@@ -18,6 +18,7 @@ import StudentPay from "@/components/StudentPay";
 import StudentExams from "@/components/StudentExams";
 import RoutineSheet from "@/components/RoutineSheet";
 import PrintChooser from "@/components/PrintChooser";
+import AttendanceCalendar from "@/components/AttendanceCalendar";
 
 const Title = ({ children }) => <h2 className="border-b border-gold/40 px-4 pb-2 pt-4 font-display text-xl text-brand-dark">{children}</h2>;
 
@@ -26,7 +27,7 @@ export default function StudentPortal() {
   const bn = (n) => num(n, lang), money = (n) => moneyL(n, lang), bnDate = (s) => dateL(s, lang), mo = (i) => monthName(i, lang);
   const label = t.status, methodLabel = t.methods;
   const { x } = useLang(); const tabs = [...Object.entries(t.tabs), ["exam", x("পরীক্ষা")], ["rt", x("ক্লাস রুটিন")]];
-  const [chooser, setChooser] = useState(null); const [pend, setPend] = useState({}); const [preInv, setPreInv] = useState(null); const [routine, setRoutine] = useState(null); const [rk, setRk] = useState(0);
+  const [cal, setCal] = useState(false); const [chooser, setChooser] = useState(null); const [pend, setPend] = useState({}); const [preInv, setPreInv] = useState(null); const [routine, setRoutine] = useState(null); const [rk, setRk] = useState(0);
   const schoolName = lang === "en" ? schoolEn.name : school.name;
   const [leaves, setLeaves] = useState(null); const [lf, setLf] = useState({}); const [lErr, setLErr] = useState(""); const [lBusy, setLBusy] = useState(false); const [d, setD] = useState(null); const [err, setErr] = useState(""); const [tab, setTab] = useState("home");
   const load = () => { setErr(""); fetch("/api/student/me").then(async (r) => { if (r.status === 401) { location.href = "/login"; return; } const j = await r.json(); r.ok ? setD(j) : setErr(j.error || t.errLoad); }).catch(() => setErr(t.errNet)); };
@@ -82,6 +83,7 @@ export default function StudentPortal() {
         </>}
 
         {tab === "att" && <>
+          <div className="flex justify-end print:hidden"><button className="btn-primary !py-2" onClick={() => setCal(true)}>{x("হাজিরা ক্যালেন্ডার")}</button></div>
           <div className="card"><p className="text-slate-600">{t.rate}</p><p className="font-display text-5xl text-brand-dark">{pct === null ? <span className="text-2xl text-slate-500">{t.noAtt}</span> : bn(pct) + "%"}</p>{pct !== null && <div className="mt-3 h-2 overflow-hidden rounded-full bg-brand-light"><div className="h-full rounded-full bg-gradient-to-r from-brand to-gold" style={{ width: pct + "%" }} /></div>}</div>
           <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[480px]"><thead><tr>{t.cols.map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
             <tbody>{Object.entries(byMonth).sort().reverse().map(([k, m]) => { const tot = m.present + m.late + m.absent; return <tr key={k}><td className="td">{mo(Number(k.slice(5)) - 1)} {bn(k.slice(0, 4)).replace(/,/g, "")}</td><td className="td">{bn(m.present)}</td><td className="td">{bn(m.absent)}</td><td className="td">{bn(m.late)}</td><td className="td">{bn(m.leave)}</td><td className="td font-bold">{tot ? bn(Math.round(((m.present + m.late) / tot) * 100)) + "%" : "—"}</td></tr>; })}
@@ -123,6 +125,7 @@ export default function StudentPortal() {
         {tab === "not" && <>{notices.length === 0 && <p className="card text-slate-500">{t.noNotices}</p>}{notices.map((n) => <article key={n._id} className="card"><p className="text-xs text-slate-500">{bnDate(n.date)}</p><h2 className="text-lg font-bold text-brand-dark">{n.title}</h2>{n.body && <p className="mt-1 whitespace-pre-line text-slate-700">{n.body}</p>}{n.fileUrl && <a href={n.fileUrl} target="_blank" className="btn-ghost mt-3 !py-1.5 text-sm"><Icon name="file" className="h-4 w-4" /> {t.file}</a>}</article>)}</>}
       </main>
       {chooser && <PrintChooser preset={chooser} onClose={() => setChooser(null)} />}
+      {cal && <AttendanceCalendar records={att} onClose={() => setCal(false)} />}
     </div>
   );
 }

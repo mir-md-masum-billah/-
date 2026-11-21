@@ -8,6 +8,7 @@ import Loader from "@/components/Loader";
 import Crest from "@/components/Crest";
 import { isPlaceholder } from "@/lib/school";
 import { validPhone } from "@/lib/phone";
+import useMe from "@/hooks/useMe";
 
 const hints = { address: "গ্রাম/এলাকা, উপজেলা, জেলা", phone: "01XXXXXXXXX", email: "school@example.com" };
 
@@ -26,9 +27,9 @@ async function shrinkImage(file) {
 
 export default function SettingsPage() {
   const { x, n } = useLang();
-  const fileRef = useRef(null);
+  const me = useMe(); const fileRef = useRef(null);
   const [s, setS] = useState(null); const [err, setErr] = useState(""); const [toast, setToast] = useState("");
-  const load = () => api("GET", "/api/settings").then((r) => (r.ok ? setS({ ...r.d, classText: r.d.classes.map((c) => ({ name: c.name, sections: (c.sections || []).join(", ") })) }) : setErr(r.d.error || x("লোড করা যায়নি"))));
+  const load = () => api("GET", "/api/settings").then((r) => (r.ok && r.d.permissionList ? setS({ ...r.d, classText: r.d.classes.map((c) => ({ name: c.name, sections: (c.sections || []).join(", ") })) }) : setErr(r.ok ? x("এই পেজ দেখার অনুমতি আপনার নেই।") : r.d.error || x("লোড করা যায়নি"))));
   useEffect(() => { load(); }, []);
   const [cErr, setCErr] = useState("");
   // ফোন নম্বর: ফাঁকা সারি বাদ দিয়ে, ভুল থাকলে ওই অংশেই বার্তা দেখিয়ে সংরক্ষণ
@@ -52,7 +53,8 @@ export default function SettingsPage() {
   };
   const save = async (body, ok = x("✅ সংরক্ষিত")) => { setErr(""); const r = await api("PUT", "/api/settings", body); if (!r.ok) return setErr(r.d.error || x("সংরক্ষণ ব্যর্থ")); setToast(ok); setTimeout(() => setToast(""), 2500); load(); };
   if (err && !s) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
-  if (!s) return <Loader compact label={x("লোড হচ্ছে...")} />;
+  if (me && !me.perms.includes("settings.manage")) return <p className="rounded-lg bg-amber-50 p-4 text-amber-900">{x("এই পেজ দেখার অনুমতি আপনার নেই।")}</p>; // সরাসরি লিংকে ঢুকলেও ক্র্যাশ নয়
+  if (!s) return err ? <p className="rounded-lg bg-amber-50 p-4 text-amber-900">{err}</p> : <Loader compact label={x("লোড হচ্ছে...")} />;
   const info = (k, l) => <div key={k}><label className="label">{x(l)}</label><input className="input" value={isPlaceholder(s[k]) ? "" : s[k]} placeholder={hints[k] || ""} onChange={(e) => setS({ ...s, [k]: e.target.value })} /></div>;
   const pickLogo = async (e) => {
     const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;

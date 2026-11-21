@@ -7,13 +7,14 @@ import { useLang } from "@/components/LangProvider";
 import { printUrl } from "@/lib/print";
 import { roleLabel } from "@/lib/rbac";
 import { DAYS } from "@/lib/routine-days";
+import AttendanceCalendar from "@/components/AttendanceCalendar";
 
 const LV = { pending: "অপেক্ষমাণ", approved: "অনুমোদিত", rejected: "প্রত্যাখ্যাত", cancelled: "বাতিল" };
 
 // শিক্ষক/স্টাফ প্রোফাইল: সব তথ্য, বেতন, নিয়োগ, রুটিন, হাজিরা, ছুটি ও কার্যকলাপ
 export default function Page({ params }) {
   const { id } = use(params); const { x, n, money, date } = useLang();
-  const [d, setD] = useState(null); const [err, setErr] = useState("");
+  const [cal, setCal] = useState(false); const [d, setD] = useState(null); const [err, setErr] = useState("");
   useEffect(() => { api("GET", `/api/staff/${id}/profile`).then((r) => (r.ok ? setD(r.d) : setErr(r.d.error || x("লোড করা যায়নি")))); }, [id]); // eslint-disable-line
   if (err) return <p className="rounded-lg bg-red-50 p-4 text-red-700">{err}</p>;
   if (!d) return <Loader compact label={x("লোড হচ্ছে...")} />;
@@ -23,7 +24,7 @@ export default function Page({ params }) {
   const tile = (l, v, c = "text-brand-dark") => <div className="rounded-xl border border-gold/40 bg-white p-3 text-center"><p className="text-xs text-slate-500">{l}</p><p className={`font-display text-2xl ${c}`}>{v}</p></div>;
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-3 print:hidden"><Link href="/admin/staff" className="btn-ghost !py-2">{x("← তালিকা")}</Link><button className="btn-primary !py-2 ml-auto" onClick={() => printUrl(`/admin/staff/${id}/print`)}>{x("প্রোফাইল প্রিন্ট")}</button></div>
+      <div className="flex flex-wrap items-center gap-3 print:hidden"><Link href="/admin/staff" className="btn-ghost !py-2">{x("← তালিকা")}</Link><button className="btn-ghost !py-2 ml-auto" onClick={() => setCal(true)}>{x("হাজিরা ক্যালেন্ডার")}</button><button className="btn-primary !py-2" onClick={() => printUrl(`/admin/staff/${id}/print`)}>{x("প্রোফাইল প্রিন্ট")}</button></div>
       <div className="card flex flex-wrap items-center gap-5">
         {t.photo ? <img src={t.photo} alt="" className="h-28 w-28 rounded-2xl border-2 border-gold object-cover" /> : <span className="grid h-28 w-28 place-items-center rounded-2xl bg-brand-light font-display text-4xl text-brand">{t.name[0]}</span>}
         <div className="min-w-0 flex-1"><h1 className="font-display text-3xl text-brand-dark">{t.name}</h1><p className="text-slate-600">{x(roleLabel[t.role])}{t.designation ? ` · ${t.designation}` : ""}</p><p className="text-sm text-slate-500">{t.userId} · {t.active ? x("সক্রিয়") : x("নিষ্ক্রিয়")}</p>
@@ -43,6 +44,7 @@ export default function Page({ params }) {
         <div className="card"><h2 className="mb-2 font-bold">{x("ছুটির আবেদন")}</h2>{d.leaves.length === 0 ? <p className="text-sm text-slate-500">{x("কোনো আবেদন নেই")}</p> : <ul className="space-y-1.5 text-sm">{d.leaves.map((l) => <li key={l._id} className="flex justify-between gap-2"><span>{date(l.from)} – {date(l.to)} <span className="text-slate-500">· {l.reason}</span></span><span className="font-semibold">{x(LV[l.status])}</span></li>)}</ul>}</div>
         <div className="card"><h2 className="mb-2 font-bold">{x("সাম্প্রতিক কাজ")}</h2>{d.activity.length === 0 ? <p className="text-sm text-slate-500">{x("কোনো কার্যকলাপ নেই")}</p> : <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">{d.activity.map((q, i) => <li key={i} className="flex justify-between gap-2 border-b border-slate-100 pb-1"><span>{q.action} · {q.entity}{q.name ? ` — ${q.name}` : ""}</span><span className="shrink-0 text-xs text-slate-500">{date(String(q.at).slice(0, 10))}</span></li>)}</ul>}</div>
       </div>
+      {cal && <AttendanceCalendar title={`${x("হাজিরা ক্যালেন্ডার")} — ${t.name}`} records={a.records} onClose={() => setCal(false)} />}
     </div>
   );
 }
