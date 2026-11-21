@@ -36,7 +36,6 @@ export default function PrintChooser({ id, admin = false, canPay = true, preset 
             {scope === "exam" && <select className="input !w-auto !py-1" value={exam} onChange={(e) => setExam(e.target.value)}>{items.map((i) => <option key={`${i.exam}|${i.year}`} value={`${i.exam}|${i.year}`}>{i.exam} — {n(i.year).replace(/[,،]/g, "")}</option>)}</select>}</label>
         </div>}
         {items && items.length === 0 && <p className="text-slate-500">{x("এখনো কোনো ফলাফল নেই")}</p>}
-        <p className="text-xs text-slate-500">{x("একসাথে বাছলে প্রতিটি নথি আলাদা পাতায় ছাপা হবে।")}</p>
         <button type="button" className="btn-primary w-full" disabled={!any} onClick={go}>{x("প্রিন্ট / PDF")}</button>
       </div>
     </Modal>

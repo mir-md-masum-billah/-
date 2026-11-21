@@ -54,7 +54,6 @@ export default function ClassDashboard() {
               <td className="td">{s.latest ? <span><b className={s.latest.passed ? "text-brand" : "text-red-600"}>{s.latest.letter} · {P(s.latest.percent)}</b><span className="block text-xs text-slate-500">{s.latest.exam} {n(s.latest.year).replace(/[,،]/g, "")}</span></span> : <span className="text-slate-400">—</span>}</td>
               {sm.totalDue !== undefined && <td className={`td font-semibold ${s.due > 0 ? "text-red-600" : "text-brand"}`}>{s.due > 0 ? money(s.due) : "—"}</td>}</tr>); })}
             {list.length === 0 && !loading && <tr><td className="td py-8 text-center text-slate-500" colSpan={8}>{x("কোনো শিক্ষার্থী নেই")}</td></tr>}</tbody></table></div>
-        <p className="text-xs text-slate-500">{x("উপস্থিতির হার = (উপস্থিত+দেরি) ÷ (উপস্থিত+দেরি+অনুপস্থিত); ছুটি/হলিডে হারে ধরা হয় না। ৭৫% এর কম হলে লাল দেখায়।")}</p>
       </>}
       {print && <StudentListPrint cls={cls} onClose={() => setPrint(false)} />}
     </div>

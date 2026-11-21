@@ -17,7 +17,6 @@ export default function Page() {
   return (
     <div>
       <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist"><button className={chip(!cls)} onClick={() => setCls("")}>{x("সব শিক্ষার্থী")}</button>{classOpts.map((c) => <button key={c} className={chip(cls === c)} onClick={() => setCls(c)}>{x(c)}</button>)}<button className={`${chip(arch)} ml-auto`} onClick={() => setArch(!arch)}>{arch ? x("← সক্রিয় তালিকা") : x("আর্কাইভ তালিকা")}</button></div>
-      {arch && <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{x("আর্কাইভ করা শিক্ষার্থীরা এখানে আছে। \"ফিরিয়ে আনুন\" চাপলে আবার সক্রিয় হবে ও লগইন চালু হবে।")}</p>}
     <CrudPage
       prefill={async () => { const r = await fetch("/api/next-id?kind=student"); const j = await r.json(); return j.id ? { studentId: j.id } : {}; }}
       key={`${cls}|${arch}|${rv}`} query={`${cls ? `&class=${encodeURIComponent(cls)}` : ""}${arch ? "&archived=true" : ""}`}

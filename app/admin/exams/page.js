@@ -64,7 +64,6 @@ export default function Exams() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3"><h1 className="mr-auto text-3xl text-brand-dark">{x("পরীক্ষার নোটিশ")}</h1><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={arch} onChange={(e) => { setArch(e.target.checked); setPage(1); }} /> {x("সরানো নোটিশ দেখুন")}</label><button className="btn-primary" onClick={openNew}>{x("+ নতুন নোটিশ")}</button></div>
-      <p className="mb-3 rounded-lg bg-brand-light p-3 text-sm">{x("নোটিশ প্রকাশ হলেই সংশ্লিষ্ট শ্রেণি-শাখার শিক্ষার্থীরা নিজেদের অ্যাকাউন্টে নোটিশ ও পরীক্ষার ফি দেখে, আর হোমপেজেও নোটিশ দেখা যায়। ফি অনুমোদনের পর প্রবেশপত্র স্বয়ংক্রিয়ভাবে তৈরি হয়।")}</p>
       {err && <p className="mb-3 rounded-lg bg-red-50 p-3 text-red-700">{err}</p>}
       <div className="card overflow-x-auto !p-0"><table className="w-full min-w-[760px]"><thead><tr>{["পরীক্ষা", "শ্রেণি/শাখা", "তারিখ", "বিষয়", "ফি", ""].map((h, i) => <th key={i} className="th">{x(h)}</th>)}</tr></thead>
         <tbody>{d?.items.map((e) => { const ds = e.schedule.map((r) => r.date).sort(); return <tr key={e._id}><td className="td font-semibold">{e.name}<span className="block text-xs font-normal text-slate-500">{e.createdByName}</span>{ds.length > 0 && ds[ds.length - 1] < todayDhaka() && <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-600">{x("পরীক্ষা শেষ")}</span>}</td><td className="td">{x(e.class)}{e.section ? ` (${e.section})` : ` — ${x("সব শাখা")}`}</td><td className="td whitespace-nowrap">{date(ds[0])}{ds.length > 1 && ` → ${date(ds[ds.length - 1])}`}</td><td className="td">{x("{0} টি", e.schedule.length)}</td><td className="td">{e.fee > 0 ? money(e.fee) : "—"}</td>
@@ -74,7 +73,7 @@ export default function Exams() {
 
       {modal === "form" && <Modal wide title={form.id ? x("নোটিশ সম্পাদনা") : x("নতুন পরীক্ষার নোটিশ")} onClose={() => setModal(null)}><form className="space-y-4" onSubmit={save}>
         <F l={x("পরীক্ষার নাম")}><input required className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={x("যেমন: অর্ধবার্ষিক পরীক্ষা ২০২৬")} /></F>
-        {!form.id && <div><label className="label">{x("শ্রেণি ও শাখা (একাধিক বাছাই করা যাবে — প্রতিটির জন্য আলাদা নোটিশ হবে)")}</label>
+        {!form.id && <div><label className="label">{x("শ্রেণি ও শাখা")}</label>
           <div className="space-y-1.5 rounded-lg border border-slate-200 p-3">{st.classes.map((c) => <div key={c.name} className="flex flex-wrap items-center gap-x-4 gap-y-1"><span className="w-16 font-semibold">{x(c.name)}</span>
             <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={sel(c.name, "")} onChange={() => toggleTarget(c.name, "")} /> {x("সব শাখা")}</label>
             {(c.sections || []).map((s) => <label key={s} className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={sel(c.name, s)} onChange={() => toggleTarget(c.name, s)} /> {s}</label>)}</div>)}</div></div>}

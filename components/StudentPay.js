@@ -43,7 +43,7 @@ export default function StudentPay({ student, invoices, preInvoice, onDone }) {
             <div className="rounded-xl border-2 border-gold/60 bg-gold-light/40 p-4"><p className="text-sm font-semibold text-brand-dark">{x("এই নম্বরে {0} টাকা পাঠান", money(f.amount || inv.free))}</p>
               <p className="mt-1 flex flex-wrap items-center gap-2"><span className="rounded px-2 py-0.5 text-xs font-bold text-white" style={{ background: kindColor[m.kind] }}>{m.label}</span><span className="font-mono text-xl font-bold">{m.accountNumber}</span><button type="button" onClick={() => copy(m.accountNumber)} className="text-sm text-brand underline">{x("কপি")}</button></p>
               <p className="text-xs text-slate-600">{[m.accountType, m.accountName].filter(Boolean).join(" · ")}</p>{m.instructions && <p className="mt-2 whitespace-pre-line text-sm">{m.instructions}</p>}
-              <p className="mt-2 text-xs text-slate-600">{x("টাকা পাঠানোর পর নিচের ফর্মটি পূরণ করুন। পেমেন্ট যাচাইয়ের আগে \"Paid\" দেখাবে না।")}</p></div>
+</div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div><label className="label">{x("শিক্ষার্থীর নাম ও আইডি")}</label><input readOnly className="input bg-slate-50" value={`${student.name} (${student.studentId})`} /></div>
               <div><label className="label">{x("পেমেন্টের ধরন")}</label><input readOnly className="input bg-slate-50" value={x(inv.title)} /></div>

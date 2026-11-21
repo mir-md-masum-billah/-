@@ -27,7 +27,6 @@ export default function Audit() {
   return (
     <div>
       <h1 className="mb-1 text-3xl text-brand-dark">{x("অডিট লগ")}</h1>
-      <p className="mb-4 text-sm text-slate-600">{x("ওয়েবসাইটে কে কখন কী যোগ, পরিবর্তন বা মুছেছেন — এখানে সহজ ভাষায় দেখুন।")}</p>
       <div className="card mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <input className="input lg:col-span-2" placeholder={x("খুঁজুন (নাম, রসিদ, ইনভয়েস...)")} value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} />
         <select className="input" value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })} aria-label={x("ক্যাটাগরি")}><option value="">{x("সব ক্যাটাগরি")}</option>{Object.entries(CATEGORIES).map(([k, c]) => <option key={k} value={k}>{lang === "en" ? c.en : c.bn}</option>)}</select>

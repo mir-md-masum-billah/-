@@ -22,7 +22,7 @@ export default function StudentExams({ onPay, refreshKey }) {
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-brand-light/50 p-3 text-sm">
           {e.fee > 0 && <span>{x("পরীক্ষার ফি")}: <b>{money(e.fee)}</b> — {paid ? <b className="text-brand">{x("পরিশোধিত ✓")}</b> : e.pending ? <b className="text-amber-700">{x("যাচাই চলছে")}</b> : <b className="text-red-600">{x("বকেয়া")}</b>}</span>}
           {e.fee > 0 && !paid && !e.pending && e.invoice && <button className="btn-primary !py-1.5 text-sm" onClick={() => onPay(e.invoice._id)}>{x("ফি পরিশোধ করুন")}</button>}
-          <span className="ml-auto">{e.admit?.eligible ? <a target="_blank" href={`/student/admit/${e.admit.id}`} className="btn-gold !py-1.5 text-sm"><Icon name="print" className="h-4 w-4" /> {x("প্রবেশপত্র (PDF/প্রিন্ট)")}</a> : <span className="text-xs text-slate-500">{x("ফি অনুমোদনের পর প্রবেশপত্র পাওয়া যাবে")}</span>}</span>
+          <span className="ml-auto">{e.admit?.eligible ? <a target="_blank" href={`/student/admit/${e.admit.id}`} className="btn-gold !py-1.5 text-sm"><Icon name="print" className="h-4 w-4" /> {x("প্রবেশপত্র (PDF/প্রিন্ট)")}</a> : null}</span>
         </div>
       </article>); });
 }

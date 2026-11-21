@@ -29,8 +29,7 @@ export default function Page() {
           <td style={td}>{n(r.total)} / {n(r.full)}</td><td style={td}>{n(r.percent)}%</td><td style={td}>{n(r.gpa.toFixed(2))}</td><td style={{ ...td, fontWeight: 800, color: r.passed ? "#0A4435" : "#b91c1c" }}>{r.letter}</td><td style={{ ...td, color: r.passed ? "#0A4435" : "#b91c1c" }}>{r.passed ? L("উত্তীর্ণ", "Pass") : L("অনুত্তীর্ণ", "Fail")}</td>{bc.tds(td)}</tr>)}
           {d.items.length === 0 && <tr><td style={td} colSpan={9}>{L("এই পরীক্ষার কোনো ফল নেই", "No results for this exam")}</td></tr>}</tbody>
       </table>
-      <p style={{ fontSize: 10, color: "#64748b", marginTop: 8 }}>{L("মেধাক্রম: উত্তীর্ণরা আগে, তারপর মোট নম্বর ও জিপিএ অনুযায়ী। গ্রেড: A+ (৮০+), A (৭০+), A- (৬০+), B (৫০+), C (৪০+), D (৩৩+), F।", "Position: passed students first, then by total marks and GPA. Grades: A+ (80+), A (70+), A- (60+), B (50+), C (40+), D (33+), F.")}</p>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 40, fontSize: 11 }}><span style={{ borderTop: "1px solid #64748b", padding: "3px 24px" }}>{L("ক্লাস টিচার", "Class teacher")}</span><span style={{ borderTop: "1px solid #64748b", padding: "3px 24px" }}>{L("প্রধান শিক্ষক", "Head teacher")}</span></div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 40, fontSize: 11 }}><span style={{ borderTop: "1px solid #64748b", padding: "3px 24px" }}>{L("ক্লাস টিচার", "Class teacher")}</span><span style={{ borderTop: "1px solid #64748b", padding: "3px 24px" }}>{L("প্রধান শিক্ষক", "Head teacher")}</span></div>
     </A4Doc>
   );
 }

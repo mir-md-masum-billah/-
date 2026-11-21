@@ -37,7 +37,7 @@ export default function Applications() {
         {m.approve ? <>
           <p className="text-sm text-slate-600">{x("শ্রেণি")} {x(m.a.class)} · {x("আইডি ও পাসওয়ার্ড স্বয়ংক্রিয় তৈরি হবে।")}</p>
           <div><label className="label">{x("শাখা")}</label><select className="input" onChange={(e) => setForm({ ...form, section: e.target.value })}><option value="">—</option>{(st.classes.find((c) => c.name === m.a.class)?.sections || []).map((o) => <option key={o}>{o}</option>)}</select></div>
-          <div><label className="label">{x("রোল (ফাঁকা = স্বয়ংক্রিয়)")}</label><input type="number" min="1" className="input" onChange={(e) => setForm({ ...form, roll: e.target.value })} /></div>
+          <div><label className="label">{x("রোল")}</label><input type="number" min="1" className="input" onChange={(e) => setForm({ ...form, roll: e.target.value })} /></div>
           <div><label className="label">{x("মাসিক বেতন (৳)")}</label><input type="number" min="0" className="input" onChange={(e) => setForm({ ...form, monthlyFee: e.target.value })} /></div></>
           : <div><label className="label">{x("কারণ (আবশ্যক)")}</label><input required minLength={3} className="input" onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>}
         {mErr && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mErr}</p>}<button className={m.approve ? "btn-primary w-full" : "btn-danger w-full"} disabled={busy}>{busy ? x("অপেক্ষা করুন...") : m.approve ? x("ভর্তি করুন") : x("প্রত্যাখ্যান করুন")}</button></form></Modal>}

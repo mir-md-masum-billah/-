@@ -78,7 +78,6 @@ export default function Accounts() {
             {led.items.length === 0 && <tr><td className="td py-10 text-center text-slate-500" colSpan={7}>{x("কোনো লেনদেন নেই")}</td></tr>}
             <tr className="bg-slate-50 font-bold"><td className="td" colSpan={4}>{x("মোট (ফিল্টার অনুযায়ী)")}</td><td className="td text-brand">{money(led.totals.income)}</td><td className="td text-red-600">{money(led.totals.expense)}</td><td className="td" /></tr></tbody></table></div>
         <div className="print:hidden"><Pager page={page} pages={led.pages} total={led.total} setPage={setPage} /></div>
-        <p className="mt-2 text-xs text-slate-500 print:hidden">{x("বেতন আদায় ও রিফান্ড \"বেতন ও ফি\" পেজ থেকে নিজে থেকে এখানে আসে — হাতে তুলতে হয় না।")}</p>
       </div>
       {modal && <Modal title={x("আয়/ব্যয় এন্ট্রি")} onClose={() => setModal(false)}><form className="space-y-3" onSubmit={save}>
         <div><label className="label">{x("ধরন")}</label><select className="input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, category: "" })}><option value="expense">{x("ব্যয়")}</option><option value="income">{x("আয়")}</option></select></div>

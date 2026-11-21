@@ -29,7 +29,6 @@ export default function Page() {
           <td style={{ ...td, fontWeight: 700 }}>{n(r.avgPercent)}%</td><td style={{ ...td, fontWeight: 800, color: r.passed ? "#0A4435" : "#b91c1c" }}>{r.passed ? (r.avgPercent >= 80 ? "A+" : r.avgPercent >= 70 ? "A" : r.avgPercent >= 60 ? "A-" : r.avgPercent >= 50 ? "B" : r.avgPercent >= 40 ? "C" : "D") : "F"}</td>{bc.tds(td)}</tr>)}
           {d.items.length === 0 && <tr><td style={td} colSpan={5 + d.exams.length * 2}>{L("কোনো ফল নেই", "No results")}</td></tr>}</tbody>
       </table>
-      <p style={{ fontSize: 10, color: "#64748b", marginTop: 8 }}>{L("সামগ্রিক মেধাক্রম: সব পরীক্ষায় উত্তীর্ণরা আগে, তারপর সব পরীক্ষার গড় শতকরা অনুযায়ী। গ্রেড = গড় শতকরার গ্রেড।", "Overall position: students who passed every exam first, then by average percentage. Grade = grade of the average percentage.")}</p>
-    </A4Doc>
+          </A4Doc>
   );
 }

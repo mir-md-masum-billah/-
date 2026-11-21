@@ -39,7 +39,6 @@ export default function AttendanceCalendar({ title, loadMonth, records, onClose 
             return <div key={date} title={s ? x(ST[s][0]) : fri ? x("সাপ্তাহিক ছুটি") : future ? "" : x("হাজিরা নেওয়া হয়নি")} className={`grid aspect-square place-items-center rounded-lg border text-sm font-bold ${cls} ${date === t ? "ring-2 ring-gold" : ""}`}><span>{n(d)}<span className="block text-[9px] font-normal leading-none">{s ? x(ST[s][0]) : fri ? x("শুক্র") : ""}</span></span></div>;
           })}</div>
           <div className="flex flex-wrap gap-2 pt-1 text-xs">{Object.entries(ST).map(([k, [l, c]]) => <span key={k} className={`rounded-full border px-2.5 py-1 font-semibold ${c}`}>{x(l)}: {n(cnt[k] || 0)}</span>)}</div>
-          <p className="text-xs text-slate-500">{x("ধূসর = হাজিরা নেওয়া হয়নি; হালকা নীল = শুক্রবার (সাপ্তাহিক ছুটি)।")}</p>
         </>}
       </div>
     </Modal>
